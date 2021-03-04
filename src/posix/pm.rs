@@ -33,13 +33,13 @@ pub extern "C" fn _exit(x: int_t) -> ! {
     unsafe {
         sys_exit(x);
     }
-    loop {} // for divergence check
+    unreachable!()
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn abort() -> ! {
     raise(SIGABRT);
-    unreachable!()
+    core::intrinsics::abort()
 }
 
 #[no_mangle]
