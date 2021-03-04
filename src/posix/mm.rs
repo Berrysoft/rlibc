@@ -1,12 +1,9 @@
 //! Memory management
 
-#[cfg(all(target_os = "macos", target_arch = "x86_64"))]
-use crate::types::caddr_t;
 use crate::types::off_t;
 use crate::types::rlimit;
 use crate::types::{int_t, intptr_t, size_t, uint_t, ulong_t, void_t};
 
-#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 use crate::syscalls::sys_brk;
 use crate::syscalls::{sys_getrlimit, sys_mmap, sys_munmap};
 
@@ -15,7 +12,6 @@ use crate::libc::errno::errno;
 
 /// Increases the data break to the given address, returning 0 on success
 /// or -1 on failure, setting errno to ENOMEM.
-#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 #[no_mangle]
 pub unsafe extern "C" fn brk(addr: *const void_t) -> int_t {
     let oldbrk = sys_brk(0) as usize;
@@ -30,7 +26,6 @@ pub unsafe extern "C" fn brk(addr: *const void_t) -> int_t {
 
 /// Increments the data break by `increment`, returning either the previous
 /// break or `((void*)-1)` on failure, setting errno to ENOMEM.
-#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 #[no_mangle]
 pub unsafe extern "C" fn sbrk(increment: intptr_t) -> *const void_t {
     let oldbrk = sys_brk(0) as *const u8;
@@ -55,7 +50,6 @@ pub unsafe extern "C" fn getrlimit(resource: int_t, rlim: *mut rlimit) -> int_t 
 }
 
 /// Map or unmap files or devices into memory.
-#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 #[no_mangle]
 pub unsafe extern "C" fn mmap(
     addr: *const void_t,
@@ -76,27 +70,7 @@ pub unsafe extern "C" fn mmap(
     ) as *const void_t
 }
 
-#[cfg(all(target_os = "macos", target_arch = "x86_64"))]
-#[no_mangle]
-pub unsafe extern "C" fn mmap(
-    addr: *const void_t,
-    length: size_t,
-    prot: int_t,
-    flags: int_t,
-    fd: int_t,
-    offset: off_t,
-) -> *const void_t {
-    forward!(sys_mmap, addr as caddr_t, length, prot, flags, fd, offset) as *const void_t
-}
-
-#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 #[no_mangle]
 pub unsafe extern "C" fn munmap(addr: *const void_t, length: size_t) -> int_t {
     forward!(sys_munmap, addr as ulong_t, length)
-}
-
-#[cfg(all(target_os = "macos", target_arch = "x86_64"))]
-#[no_mangle]
-pub unsafe extern "C" fn munmap(addr: *const void_t, length: size_t) -> int_t {
-    forward!(sys_munmap, addr as caddr_t, length)
 }

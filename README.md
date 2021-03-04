@@ -31,4 +31,4 @@ rlibc currently supports part of C99 and POSIX, as well as some OS-specific func
 
 # Targets
 
-rlibc currently supports Linux and OS X on x86-64.
+rlibc currently supports Linux on x86-64.

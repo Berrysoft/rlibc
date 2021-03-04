@@ -11,9 +11,6 @@ pub static mut ARGC: usize = 0;
 pub static mut ENVP: *const *const char_t = 0 as *const *const char_t;
 pub static mut ENVC: usize = 0;
 
-#[cfg(target_os = "macos")]
-pub static mut APPLE: *const *const char_t = 0 as *const *const char_t;
-
 const K_ENV_MAXKEYLEN: size_t = 512;
 
 pub unsafe fn get_argv() -> &'static [*const char_t] {
@@ -22,43 +19,6 @@ pub unsafe fn get_argv() -> &'static [*const char_t] {
 
 pub unsafe fn get_envp() -> &'static [*const char_t] {
     from_raw_parts(ENVP, ENVC)
-}
-
-#[no_mangle]
-#[cfg(target_os = "macos")]
-pub unsafe extern "C" fn _NSGetArgc() -> *const int_t {
-    (&ARGC) as *const usize as *const int_t
-}
-
-#[no_mangle]
-#[cfg(target_os = "macos")]
-pub unsafe extern "C" fn _NSGetArgv() -> *const *const *const char_t {
-    (&ARGV) as *const *const *const char_t
-}
-
-#[no_mangle]
-#[cfg(target_os = "macos")]
-pub unsafe extern "C" fn _NSGetEnviron() -> *const *const *const char_t {
-    (&ENVP) as *const *const *const char_t
-}
-
-#[no_mangle]
-#[cfg(target_os = "macos")]
-pub unsafe extern "C" fn _NSGetProgname() -> *const *const char_t {
-    APPLE // apple[0] should point to the binary's path
-}
-
-#[no_mangle]
-#[cfg(target_os = "macos")]
-pub unsafe extern "C" fn _NSGetExecutablePath(buf: *mut char_t, size: *mut u32) -> int_t {
-    let len = strlen(*APPLE);
-    if len < *size as size_t {
-        strncpy(buf, *APPLE, len);
-        0
-    } else {
-        *size = len as u32;
-        -1
-    }
 }
 
 #[no_mangle]
