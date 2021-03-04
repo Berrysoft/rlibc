@@ -207,6 +207,7 @@ pub unsafe extern "C" fn memcmp(m1: *const char_t, m2: *const char_t, n: size_t)
 }
 
 #[no_mangle]
+#[deprecated(since = "0.1.0", note = "use `memcmp` instead")]
 pub unsafe extern "C" fn bcmp(m1: *const char_t, m2: *const char_t, n: size_t) -> int_t {
     match memcmp(m1, m2, n) {
         0 => 0,
