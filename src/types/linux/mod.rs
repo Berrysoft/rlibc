@@ -20,6 +20,7 @@ pub type __kernel_gid32_t = uint_t;
 pub type __kernel_old_uid32_t = __kernel_uid_t;
 pub type __kernel_old_gid32_t = __kernel_gid_t;
 pub type __kernel_old_dev_t = uint_t;
+#[repr(C)]
 pub struct __kernel_fsid_t {
     pub val: [int_t; 2],
 }
@@ -36,17 +37,20 @@ pub type __kernel_gid16_t = ushort_t;
 pub type pid_t = int_t;
 pub type clockid_t = __kernel_clockid_t;
 
+#[repr(C)]
 pub struct pollfd {
     pub fd: int_t,
     pub events: short_t,
     pub revents: short_t,
 }
 
+#[repr(C)]
 pub struct iovec {
     pub iov_base: *mut void_t,
     pub iov_len: __kernel_size_t,
 }
 
+#[repr(C)]
 pub struct msghdr {
     pub msg_name: *mut void_t,
     pub msg_namelen: int_t,
@@ -57,11 +61,13 @@ pub struct msghdr {
     pub msg_flags: uint_t,
 }
 
+#[repr(C)]
 pub struct mmsghdr {
     pub msg_hdr: msghdr,
     pub msg_len: uint_t,
 }
 
+#[repr(C)]
 pub struct timex {
     pub modes: uint_t,              /* mode selector */
     pub offest: __kernel_long_t,    /* time offset (usec) */
@@ -91,22 +97,26 @@ pub struct timex {
     pub _____padding: [i32; 11],
 }
 
+#[repr(C)]
 pub struct timeval {
     pub tv_sec: __kernel_time_t,
     pub tv_usec: __kernel_suseconds_t,
 }
 
+#[repr(C)]
 pub struct file_handle {
     pub handle_bytes: u32,
     pub handle_type: int_t,
     pub f_handle: [uchar_t; 0],
 }
 
+#[repr(C)]
 pub struct rlimit64 {
     pub rlim_cur: u64,
     pub rlim_max: u64,
 }
 
+#[repr(C)]
 pub struct timespec {
     pub tv_sec: __kernel_time_t,
     pub tv_nsec: long_t,
@@ -120,17 +130,20 @@ pub const NSIG_WORDS: usize = NSIG / NSIG_BPW;
 #[no_mangle]
 pub static _NSIG_WORDS: usize = NSIG_WORDS;
 
+#[repr(C)]
 pub struct sigset_t {
     pub sig: [ulong_t; NSIG_WORDS],
 }
 
 pub type sa_family_t = __kernel_sa_family_t;
 
+#[repr(C)]
 pub struct sockaddr {
     pub sa_family: sa_family_t,
     pub sa_data: [char_t; 14],
 }
 
+#[repr(C)]
 pub struct itimerspec {
     pub it_interval: timespec,
     pub it_value: timespec,
@@ -138,12 +151,14 @@ pub struct itimerspec {
 
 pub type loff_t = __kernel_loff_t;
 
+#[repr(C)]
 pub struct robust_list_head {
     pub list: robust_list,
     pub futex_offset: long_t,
     pub list_op_pending: *mut robust_list,
 }
 
+#[repr(C)]
 pub struct robust_list {
     pub next: *mut robust_list,
 }
@@ -155,6 +170,7 @@ pub type gid_t = __kernel_gid32_t;
 
 pub type key_serial_t = i32;
 
+#[repr(C)]
 pub struct rusage {
     pub ru_utime: timeval,   /* user time used */
     pub ru_stime: timeval,   /* system time used */
@@ -174,6 +190,7 @@ pub struct rusage {
     pub ru_nivcsw: long_t,   /* involuntary */
 }
 
+#[repr(C)]
 pub struct kexec_segment {
     pub buf: *const void_t,
     pub bufsz: size_t,
@@ -181,6 +198,7 @@ pub struct kexec_segment {
     pub memsz: size_t,
 }
 
+#[repr(C)]
 pub struct mq_attr {
     pub mq_flags: long_t,
     pub mq_maxmsg: long_t,
@@ -192,12 +210,14 @@ pub struct mq_attr {
 pub type mqd_t = __kernel_mqd_t;
 pub type timer_t = __kernel_timer_t;
 
+#[repr(C)]
 pub struct sembuf {
     sem_num: ushort_t,
     sem_op: short_t,
     sem_flg: short_t,
 }
 
+#[repr(C)]
 pub struct linux_dirent64 {
     pub d_ino: u64,
     pub d_off: i64,
@@ -206,6 +226,7 @@ pub struct linux_dirent64 {
     pub d_name: [char_t; 0],
 }
 
+#[repr(C)]
 pub struct io_event {
     pub data: u64,
     pub obj: u64,
@@ -217,16 +238,19 @@ pub type aio_context_t = __kernel_ulong_t;
 pub type time_t = __kernel_time_t;
 pub type qid_t = __kernel_uid32_t;
 
+#[repr(C)]
 pub struct timezone {
     pub tz_minuteswest: int_t,
     pub tz_dsttime: int_t,
 }
 
+#[repr(C)]
 pub struct rlimit {
     pub rlim_cur: __kernel_ulong_t,
     pub rlim_max: __kernel_ulong_t,
 }
 
+#[repr(C)]
 pub struct __sysctl_args {
     pub name: *mut int_t,
     pub nlen: int_t,
@@ -237,10 +261,12 @@ pub struct __sysctl_args {
     pub __unused: [ulong_t; 4],
 }
 
+#[repr(C)]
 pub struct sched_param {
     pub sched_priority: int_t,
 }
 
+#[repr(C)]
 pub struct statfs {
     pub f_type: __statfs_word,
     pub f_bsize: __statfs_word,
@@ -256,6 +282,7 @@ pub struct statfs {
     pub f_spare: [__statfs_word; 4],
 }
 
+#[repr(C)]
 pub struct ustat {
     pub f_tfree: __kernel_daddr_t,
     pub f_tinode: __kernel_ino_t,
@@ -263,11 +290,13 @@ pub struct ustat {
     pub f_fpack: [char_t; 6],
 }
 
+#[repr(C)]
 pub struct utimbuf {
     pub actime: __kernel_time_t,
     pub modtime: __kernel_time_t,
 }
 
+#[repr(C)]
 pub struct linux_dirent {
     pub d_ino: ulong_t,
     pub d_off: ulong_t,
@@ -275,6 +304,7 @@ pub struct linux_dirent {
     pub d_name: [char_t; 1],
 }
 
+#[repr(C)]
 pub struct msqid_ds {
     pub msg_perm: ipc_perm,
     pub msg_first: *mut msg,
@@ -291,6 +321,7 @@ pub struct msqid_ds {
     pub msg_lrpid: __kernel_ipc_pid_t,
 }
 
+#[repr(C)]
 pub struct msgbuf {
     pub mtype: __kernel_long_t,
     pub mtext: [char_t; 1],
@@ -298,6 +329,7 @@ pub struct msgbuf {
 
 pub type key_t = __kernel_key_t;
 
+#[repr(C)]
 pub struct old_utsname {
     pub sysname: [char_t; 65],
     pub nodename: [char_t; 65],
@@ -308,11 +340,13 @@ pub struct old_utsname {
 
 pub type off_t = __kernel_off_t;
 
+#[repr(C)]
 pub struct itimerval {
     pub it_interval: timeval,
     pub it_value: timeval,
 }
 
+#[repr(C)]
 pub struct shmid_ds {
     pub shm_perm: ipc_perm,
     pub shm_segsz: int_t,
@@ -327,6 +361,7 @@ pub struct shmid_ds {
     pub shm_unused3: *mut void_t,
 }
 
+#[repr(C)]
 pub struct sigaction {
     pub sa_handler: __sighandler_t,
     pub sa_flags: ulong_t,
@@ -334,12 +369,11 @@ pub struct sigaction {
     pub sa_mask: sigset_t,
 }
 
-pub type __sigrestore_t = *mut __restorefn_t;
-pub type __restorefn_t = fn();
+pub type __sigrestore_t = Option<extern "C" fn()>;
 
-pub type __sighandler_t = *mut __signalfn_t;
-pub type __signalfn_t = fn(int_t);
+pub type __sighandler_t = Option<extern "C" fn(int_t)>;
 
+#[repr(C)]
 pub struct ipc_perm {
     pub key: __kernel_key_t,
     pub uid: __kernel_uid_t,

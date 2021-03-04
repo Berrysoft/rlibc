@@ -111,5 +111,5 @@ pub unsafe extern "C" fn setgid(gid: gid_t) -> int_t {
 
 #[no_mangle]
 pub unsafe extern "C" fn setsid() -> pid_t {
-    (forward!(sys_setsid,) as pid_t)
+    forward!(sys_setsid,) as pid_t
 }

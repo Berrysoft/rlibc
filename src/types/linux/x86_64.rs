@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub type char_t = i8;
 pub type uchar_t = u8;
 pub type short_t = i16;
@@ -15,34 +17,8 @@ pub type size_t = usize;
 pub type ptrdiff_t = isize;
 
 // stdint
-pub type int8_t = char_t;
-pub type int16_t = short_t;
-pub type int32_t = int_t;
-pub type int64_t = longlong_t;
-pub type uint8_t = uchar_t;
-pub type uint16_t = ushort_t;
-pub type uint32_t = uint_t;
-pub type uint64_t = ulonglong_t;
-pub type int_least8_t = int8_t;
-pub type int_least16_t = int16_t;
-pub type int_least32_t = int32_t;
-pub type int_least64_t = int64_t;
-pub type uint_least8_t = uint8_t;
-pub type uint_least16_t = uint16_t;
-pub type uint_least32_t = uint32_t;
-pub type uint_least64_t = uint64_t;
-pub type int_fast8_t = int8_t;
-pub type int_fast16_t = int16_t;
-pub type int_fast32_t = int32_t;
-pub type int_fast64_t = int64_t;
-pub type uint_fast8_t = uint8_t;
-pub type uint_fast16_t = uint16_t;
-pub type uint_fast32_t = uint32_t;
-pub type uint_fast64_t = uint64_t;
-pub type intptr_t = long_t;
-pub type uintptr_t = ulong_t;
-pub type intmax_t = long_t;
-pub type uintmax_t = ulong_t;
+pub type intptr_t = isize;
+pub type uintptr_t = usize;
 
 pub type void_t = core::ffi::c_void;
 
@@ -60,6 +36,7 @@ pub struct epoll_event {
     pub data: u64,
 }
 
+#[repr(C)]
 pub struct stat {
     pub std_dev: ulong_t,
     pub st_ino: ulong_t,
@@ -83,6 +60,7 @@ pub struct stat {
     pub __unused: [long_t; 3],
 }
 
+#[repr(C)]
 pub struct iocb {
     pub aio_data: u64,
     pub aio_key: u32,
@@ -98,6 +76,7 @@ pub struct iocb {
     pub aio_resfd: u32,
 }
 
+#[repr(C)]
 pub struct pt_regs {
     pub r15: ulong_t,
     pub r14: ulong_t,
@@ -122,6 +101,7 @@ pub struct pt_regs {
     pub ss: ulong_t,
 }
 
+#[repr(C)]
 pub struct stack_t {
     pub ss_sp: *mut void_t,
     pub ss_flags: int_t,
@@ -141,6 +121,7 @@ pub struct cap_user_header_t {
     pub pid: int_t,
 }
 
+#[repr(C)]
 pub struct msg {
     pub byte3: u8,
     pub byte2: u8,
@@ -158,16 +139,19 @@ pub const FD_SETSIZE: usize = 1024;
 
 #[no_mangle]
 pub static __FD_SETSIZE: usize = FD_SETSIZE;
+#[repr(C)]
 pub struct __kernel_fd_set {
     // XXX size_of
     pub fds_bits: [ulong_t; (FD_SETSIZE / (8 * 8))],
 }
 
+#[repr(C)]
 pub struct getcpu_cache {
     // XXX size_of
     pub blob: [ulong_t; 128 / 8],
 }
 
+#[repr(C)]
 pub struct sysinfo {
     pub uptime: long_t,
     pub loads: [ulong_t; 3],

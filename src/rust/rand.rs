@@ -48,5 +48,5 @@ impl Rand for OSRand {
 
 pub fn os_rand() -> OSRand {
     let fd = unsafe { open(cs!("/dev/urandom"), O_RDONLY, 0) };
-    OSRand { fd: FD { fd: fd } }
+    OSRand { fd: FD { fd } }
 }
