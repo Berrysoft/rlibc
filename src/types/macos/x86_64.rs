@@ -1,17 +1,17 @@
-pub type char_t     = i8;
-pub type uchar_t    = u8;
-pub type short_t    = i16;
-pub type ushort_t   = u16;
-pub type int_t      = i32;
-pub type uint_t     = u32;
-pub type long_t     = i64;
+pub type char_t = i8;
+pub type uchar_t = u8;
+pub type short_t = i16;
+pub type ushort_t = u16;
+pub type int_t = i32;
+pub type uint_t = u32;
+pub type long_t = i64;
 pub type longlong_t = i64;
-pub type ulong_t    = u64;
-pub type ulonglong_t= i64;
+pub type ulong_t = u64;
+pub type ulonglong_t = i64;
 
 // stddef
-pub type ssize_t   = long_t;
-pub type size_t    = ulong_t;
+pub type ssize_t = long_t;
+pub type size_t = ulong_t;
 pub type ptrdiff_t = long_t;
 
 // stdint
@@ -41,12 +41,12 @@ pub type uint_fast32_t = uint32_t;
 pub type uint_fast64_t = uint64_t;
 pub type intptr_t = long_t;
 pub type uintptr_t = ulong_t;
-pub type intmax_t  = long_t;
+pub type intmax_t = long_t;
 pub type uintmax_t = ulong_t;
 
 // time
 pub type clock_t = ulong_t;
-pub type time_t  = long_t;
+pub type time_t = long_t;
 #[repr(C)]
 pub struct tm {
     pub tm_sec: int_t,
@@ -69,17 +69,17 @@ pub enum void_t {
 }
 
 // sys/types.h
-pub type dev_t   = int32_t;
-pub type gid_t   = uint32_t;
-pub type id_t    = uint32_t;
-pub type ino_t   = uint64_t;
-pub type mode_t  = uint16_t;
+pub type dev_t = int32_t;
+pub type gid_t = uint32_t;
+pub type id_t = uint32_t;
+pub type ino_t = uint64_t;
+pub type mode_t = uint16_t;
 pub type nlink_t = uint16_t;
-pub type off_t   = int64_t;
-pub type pid_t   = int32_t;
-pub type uid_t   = uint32_t;
+pub type off_t = int64_t;
+pub type pid_t = int32_t;
+pub type uid_t = uint32_t;
 
-pub type key_t   = int32_t;
+pub type key_t = int32_t;
 pub type useconds_t = uint32_t;
 pub type suseconds_t = int32_t;
 

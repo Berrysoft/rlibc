@@ -4,34 +4,34 @@ pub use self::arch::*;
 #[path = "x86_64.rs"]
 mod arch;
 
-pub type __kernel_key_t       = int_t;
-pub type __kernel_long_t      = long_t;
-pub type __kernel_ulong_t     = ulong_t;
-pub type __kernel_ino_t       = __kernel_ulong_t;
-pub type __kernel_mode_t      = uint_t;
-pub type __kernel_pid_t       = int_t;
-pub type __kernel_ipc_pid_t   = int_t;
-pub type __kernel_uid_t       = uint_t;
-pub type __kernel_gid_t       = uint_t;
+pub type __kernel_key_t = int_t;
+pub type __kernel_long_t = long_t;
+pub type __kernel_ulong_t = ulong_t;
+pub type __kernel_ino_t = __kernel_ulong_t;
+pub type __kernel_mode_t = uint_t;
+pub type __kernel_pid_t = int_t;
+pub type __kernel_ipc_pid_t = int_t;
+pub type __kernel_uid_t = uint_t;
+pub type __kernel_gid_t = uint_t;
 pub type __kernel_suseconds_t = __kernel_long_t;
-pub type __kernel_daddr_t     = int_t;
-pub type __kernel_uid32_t     = uint_t;
-pub type __kernel_gid32_t     = uint_t;
+pub type __kernel_daddr_t = int_t;
+pub type __kernel_uid32_t = uint_t;
+pub type __kernel_gid32_t = uint_t;
 pub type __kernel_old_uid32_t = __kernel_uid_t;
 pub type __kernel_old_gid32_t = __kernel_gid_t;
-pub type __kernel_old_dev_t   = uint_t;
+pub type __kernel_old_dev_t = uint_t;
 pub struct __kernel_fsid_t {
     pub val: [int_t; 2],
 }
-pub type __kernel_off_t       = __kernel_long_t;
-pub type __kernel_loff_t      = longlong_t;
-pub type __kernel_time_t      = __kernel_long_t;
-pub type __kernel_clock_t     = __kernel_long_t;
-pub type __kernel_timer_t     = int_t;
-pub type __kernel_clockid_t   = int_t;
-pub type __kernel_caddr_t     = *mut char_t;
-pub type __kernel_uid16_t     = ushort_t;
-pub type __kernel_gid16_t     = ushort_t;
+pub type __kernel_off_t = __kernel_long_t;
+pub type __kernel_loff_t = longlong_t;
+pub type __kernel_time_t = __kernel_long_t;
+pub type __kernel_clock_t = __kernel_long_t;
+pub type __kernel_timer_t = int_t;
+pub type __kernel_clockid_t = int_t;
+pub type __kernel_caddr_t = *mut char_t;
+pub type __kernel_uid16_t = ushort_t;
+pub type __kernel_gid16_t = ushort_t;
 
 pub type pid_t = int_t;
 pub type clockid_t = __kernel_clockid_t;
@@ -63,28 +63,28 @@ pub struct mmsghdr {
 }
 
 pub struct timex {
-    pub modes: uint_t, /* mode selector */
-    pub offest: __kernel_long_t, /* time offset (usec) */
-    pub freq: __kernel_long_t,  /* frequency offset (scaled ppm) */
-    pub maxerror: __kernel_long_t, /* maximum error (usec) */
-    pub esterror: __kernel_long_t, /* estimated error (usec) */
-    pub status: int_t, /* clock command/status */
-    pub constant: __kernel_long_t, /* pll time constant */
+    pub modes: uint_t,              /* mode selector */
+    pub offest: __kernel_long_t,    /* time offset (usec) */
+    pub freq: __kernel_long_t,      /* frequency offset (scaled ppm) */
+    pub maxerror: __kernel_long_t,  /* maximum error (usec) */
+    pub esterror: __kernel_long_t,  /* estimated error (usec) */
+    pub status: int_t,              /* clock command/status */
+    pub constant: __kernel_long_t,  /* pll time constant */
     pub precision: __kernel_long_t, /* clock precision (usec) (read only) */
     pub tolerance: __kernel_long_t, /* clock frequency tolerance (ppm)
-    pub                            * (read only)
-    pub                            */
-    pub time: timeval, /* (read only, except for ADJ_SETOFFSET) */
+                                    pub                            * (read only)
+                                    pub                            */
+    pub time: timeval,         /* (read only, except for ADJ_SETOFFSET) */
     pub tick: __kernel_long_t, /* (modified) usecs between clock ticks */
 
     pub ppsfreq: __kernel_long_t, /* pps frequency (scaled ppm) (ro) */
-    pub jitter: __kernel_long_t, /* pps jitter (us) (ro) */
-    pub shift: int_t, /* interval duration (s) (shift) (ro) */
-    pub stabil: __kernel_long_t, /* pps stability (scaled ppm) (ro) */
-    pub jitcnt: __kernel_long_t, /* jitter limit exceeded (ro) */
-    pub calcnt: __kernel_long_t, /* calibration intervals (ro) */
-    pub errcnt: __kernel_long_t, /* calibration errors (ro) */
-    pub stbcnt: __kernel_long_t, /* stability limit exceeded (ro) */
+    pub jitter: __kernel_long_t,  /* pps jitter (us) (ro) */
+    pub shift: int_t,             /* interval duration (s) (shift) (ro) */
+    pub stabil: __kernel_long_t,  /* pps stability (scaled ppm) (ro) */
+    pub jitcnt: __kernel_long_t,  /* jitter limit exceeded (ro) */
+    pub calcnt: __kernel_long_t,  /* calibration intervals (ro) */
+    pub errcnt: __kernel_long_t,  /* calibration errors (ro) */
+    pub stbcnt: __kernel_long_t,  /* stability limit exceeded (ro) */
 
     pub tai: int_t, /* TAI offset (ro) */
 
@@ -156,22 +156,22 @@ pub type gid_t = __kernel_gid32_t;
 pub type key_serial_t = i32;
 
 pub struct rusage {
-    pub ru_utime: timeval,      /* user time used */
-    pub ru_stime: timeval,      /* system time used */
-    pub ru_maxrss: long_t,      /* maximum resident set size */
-    pub ru_ixrss: long_t,       /* integral shared memory size */
-    pub ru_idrss: long_t,       /* integral unshared data size */
-    pub ru_isrss: long_t,       /* integral unshared stack size */
-    pub ru_minflt: long_t,      /* page reclaims */
-    pub ru_majflt: long_t,      /* page faults */
-    pub ru_nswap: long_t,       /* swaps */
-    pub ru_inblock: long_t,     /* block input operations */
-    pub ru_oublock: long_t,     /* block output operations */
-    pub ru_msgsnd: long_t,      /* messages sent */
-    pub ru_msgrcv: long_t,      /* messages received */
-    pub ru_nsignals: long_t,    /* signals received */
-    pub ru_nvcsw: long_t,       /* voluntary context switches */
-    pub ru_nivcsw: long_t,      /* involuntary " */
+    pub ru_utime: timeval,   /* user time used */
+    pub ru_stime: timeval,   /* system time used */
+    pub ru_maxrss: long_t,   /* maximum resident set size */
+    pub ru_ixrss: long_t,    /* integral shared memory size */
+    pub ru_idrss: long_t,    /* integral unshared data size */
+    pub ru_isrss: long_t,    /* integral unshared stack size */
+    pub ru_minflt: long_t,   /* page reclaims */
+    pub ru_majflt: long_t,   /* page faults */
+    pub ru_nswap: long_t,    /* swaps */
+    pub ru_inblock: long_t,  /* block input operations */
+    pub ru_oublock: long_t,  /* block output operations */
+    pub ru_msgsnd: long_t,   /* messages sent */
+    pub ru_msgrcv: long_t,   /* messages received */
+    pub ru_nsignals: long_t, /* signals received */
+    pub ru_nvcsw: long_t,    /* voluntary context switches */
+    pub ru_nivcsw: long_t,   /* involuntary */
 }
 
 pub struct kexec_segment {

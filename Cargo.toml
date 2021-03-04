@@ -1,0 +1,17 @@
+[package]
+name = "c"
+version = "0.1.0"
+authors = ["Alex Chandel <alexchandel@gmail.com>", "mahkoh <ju.orth@gmail.com>", "Berrysoft <Strawberry_Str@hotmail.com>"]
+edition = "2018"
+readme = "README.md"
+
+[dependencies]
+
+[lib]
+crate-type = ["staticlib"]
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"

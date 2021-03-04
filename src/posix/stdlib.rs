@@ -1,10 +1,10 @@
-use rust::prelude::*;
-use types::{char_t, int_t, size_t};
-use libc::string::{strlen, strncpy, strnlen, strncmp};
-use libc::errno::{errno};
+use crate::libc::errno::errno;
+use crate::libc::string::{strlen, strncmp, strncpy, strnlen};
+use crate::types::{char_t, int_t, size_t};
 // use consts::NULL;
-use consts::errno::{EINVAL, EEXIST};
-use posix::pm::{_exit};
+use crate::consts::errno::{EEXIST, EINVAL};
+pub use crate::posix::pm::{_Exit, _exit, abort, atexit, exit};
+use core::slice::from_raw_parts;
 
 pub static mut ARGV: *const *const char_t = 0 as *const *const char_t;
 pub static mut ARGC: usize = 0;
@@ -16,49 +16,41 @@ pub static mut APPLE: *const *const char_t = 0 as *const *const char_t;
 
 const K_ENV_MAXKEYLEN: size_t = 512;
 
-#[no_mangle]
-pub unsafe extern fn get_argv() -> &'static [*const char_t] {
-    from_raw_parts(
-        ARGV,
-        ARGC
-    )
+pub unsafe fn get_argv() -> &'static [*const char_t] {
+    from_raw_parts(ARGV, ARGC)
 }
 
-#[no_mangle]
-pub unsafe extern fn get_envp() -> &'static [*const char_t] {
-    from_raw_parts(
-        ENVP,
-        ENVC
-    )
+pub unsafe fn get_envp() -> &'static [*const char_t] {
+    from_raw_parts(ENVP, ENVC)
 }
 
 #[no_mangle]
 #[cfg(target_os = "macos")]
-pub unsafe extern fn _NSGetArgc() -> *const int_t {
+pub unsafe extern "C" fn _NSGetArgc() -> *const int_t {
     (&ARGC) as *const usize as *const int_t
 }
 
 #[no_mangle]
 #[cfg(target_os = "macos")]
-pub unsafe extern fn _NSGetArgv() -> *const *const *const char_t {
+pub unsafe extern "C" fn _NSGetArgv() -> *const *const *const char_t {
     (&ARGV) as *const *const *const char_t
 }
 
 #[no_mangle]
 #[cfg(target_os = "macos")]
-pub unsafe extern fn _NSGetEnviron() -> *const *const *const char_t {
+pub unsafe extern "C" fn _NSGetEnviron() -> *const *const *const char_t {
     (&ENVP) as *const *const *const char_t
 }
 
 #[no_mangle]
 #[cfg(target_os = "macos")]
-pub unsafe extern fn _NSGetProgname() -> *const *const char_t {
+pub unsafe extern "C" fn _NSGetProgname() -> *const *const char_t {
     APPLE // apple[0] should point to the binary's path
 }
 
 #[no_mangle]
 #[cfg(target_os = "macos")]
-pub unsafe extern fn _NSGetExecutablePath(buf: *mut char_t, size: *mut u32) -> int_t {
+pub unsafe extern "C" fn _NSGetExecutablePath(buf: *mut char_t, size: *mut u32) -> int_t {
     let len = strlen(*APPLE);
     if len < *size as size_t {
         strncpy(buf, *APPLE, len);
@@ -70,25 +62,23 @@ pub unsafe extern fn _NSGetExecutablePath(buf: *mut char_t, size: *mut u32) -> i
 }
 
 #[no_mangle]
-pub unsafe extern fn getenv(key: *const char_t) -> *const char_t {
+pub unsafe extern "C" fn getenv(key: *const char_t) -> *const char_t {
     let len = strnlen(key, K_ENV_MAXKEYLEN);
     for &env in get_envp().iter() {
-        if strncmp(key, env, len) == 0 && *offset(env, len as isize) == '=' as i8 {
-            return offset(env, (len as isize) + 1)
+        if strncmp(key, env, len) == 0 && *env.offset(len as isize) == '=' as i8 {
+            return env.offset((len as isize) + 1);
         }
     }
     0 as *const char_t
 }
 
 #[no_mangle]
-pub unsafe extern fn setenv(key: *const char_t,
-                            val: *const char_t,
-                            overwrite: int_t) -> int_t {
+pub unsafe extern "C" fn setenv(key: *const char_t, val: *const char_t, overwrite: int_t) -> int_t {
     _exit(1); // TODO implement mutable environment
 }
 
 #[no_mangle]
-pub unsafe extern fn unsetenv(key: *const char_t) -> int_t {
+pub unsafe extern "C" fn unsetenv(key: *const char_t) -> int_t {
     _exit(1); // TODO implement mutable environment
 }
 

@@ -1,240 +1,335 @@
-use rust::prelude::*;
+use crate::types::{char_t, int_t, size_t};
+use core::cmp::Ordering;
+use core::ptr::{copy, copy_nonoverlapping, null};
 
-use types::{uchar_t, char_t, int_t, size_t};
-
-#[no_mangle]
-pub unsafe extern fn memcpy(dst: *mut char_t, src: *const char_t, n: size_t) -> *mut char_t {
-    for i in range(0, n as isize).rev() {
-        *offset_mut(dst, i) = *offset(src, i);
-    }
-    dst
+struct MemMutIter<'a, B: MemBound> {
+    data: &'a mut char_t,
+    bound: B,
 }
 
-#[no_mangle]
-pub unsafe extern fn memmove(dst: *mut char_t, src: *const char_t, n: size_t) -> *mut char_t {
-    if (dst as usize) > (src as usize) {
-        return memcpy(dst, src, n);
-    }
-    for i in range(0, n as isize) {
-        *offset_mut(dst, i) = *offset(src, i);
-    }
-    dst
-}
-
-#[no_mangle]
-pub unsafe extern fn strcpy(dst: *mut char_t, src: *const char_t) -> *mut char_t {
-    let mut i = 0;
-    while *offset(src, i) != 0 {
-        *offset_mut(dst, i) = *offset(src, i);
-        i += 1;
-    }
-    *offset_mut(dst, i) = 0;
-    dst
-}
-
-#[no_mangle]
-pub unsafe extern fn strncpy(dst: *mut char_t, src: *const char_t, n: size_t) -> *mut char_t {
-    let n = n as isize;
-    let mut i = 0;
-    while i < n && *offset(src, i) != 0 {
-        *offset_mut(dst, i) = *offset(src, i);
-        i += 1;
-    }
-    while i < n {
-        *offset_mut(dst, i) = 0;
-        i += 1;
-    }
-    dst
-}
-
-#[no_mangle]
-pub unsafe extern fn strcat(dst: *mut char_t, src: *const char_t) -> *mut char_t {
-    let base = strlen(dst as *const _) as isize;
-    let mut i = 0;
-    while *offset(src, i) != 0 {
-        *offset_mut(dst, base+i) = *offset(src, i);
-        i += 1;
-    }
-    *offset_mut(dst, base+i) = 0;
-    dst
-}
-
-#[no_mangle]
-pub unsafe extern fn strncat(dst: *mut char_t, src: *const char_t, n: size_t) -> *mut char_t {
-    let base = strlen(dst as *const _) as isize;
-    for i in range(0, n as isize) {
-        *offset_mut(dst, base+i) = *offset(src, i);
-        if *offset(src, i) == 0 {
-            break;
+impl<'a, B: MemBound> MemMutIter<'a, B> {
+    pub fn from_ptr(data: *mut char_t, bound: B) -> Self {
+        Self {
+            data: unsafe { data.as_mut().unwrap_unchecked() },
+            bound,
         }
     }
+}
+
+impl<'a, B: MemBound> Iterator for MemMutIter<'a, B> {
+    type Item = &'a mut char_t;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.bound.test(*self.data) {
+            let res = self.data as *mut char_t;
+            self.data = unsafe { res.add(1).as_mut().unwrap_unchecked() };
+            Some(unsafe { res.as_mut().unwrap_unchecked() })
+        } else {
+            None
+        }
+    }
+}
+
+struct MemIter<'a, B: MemBound> {
+    data: &'a char_t,
+    bound: B,
+}
+
+impl<'a, B: MemBound> MemIter<'a, B> {
+    pub fn from_ptr(data: *const char_t, bound: B) -> Self {
+        let data = unsafe { data.as_ref().unwrap_unchecked() };
+        Self { data, bound }
+    }
+
+    pub fn into_rev(self) -> MemIter<'a, LenBound> {
+        let len = self.bound.len(self.data as *const _);
+        MemIter::from_ptr(
+            unsafe { (self.data as *const char_t).add(len - 1) },
+            LenBound { len },
+        )
+    }
+}
+
+impl<'a, B: MemBound> Iterator for MemIter<'a, B> {
+    type Item = &'a char_t;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.bound.test(*self.data) {
+            let res = self.data;
+            self.data = unsafe { (res as *const char_t).add(1).as_ref().unwrap_unchecked() };
+            Some(res)
+        } else {
+            None
+        }
+    }
+}
+
+trait MemBound {
+    fn test(&mut self, data: char_t) -> bool;
+    fn len(&self, _: *const char_t) -> usize {
+        unimplemented!()
+    }
+    fn and<B2: MemBound>(self, b2: B2) -> AndBound<Self, B2>
+    where
+        Self: Sized,
+    {
+        AndBound::new(self, b2)
+    }
+}
+
+struct NoBound;
+
+impl MemBound for NoBound {
+    fn test(&mut self, _: char_t) -> bool {
+        true
+    }
+}
+
+struct LenBound {
+    pub len: size_t,
+}
+
+impl MemBound for LenBound {
+    fn len(&self, _: *const char_t) -> usize {
+        self.len
+    }
+    fn test(&mut self, _: char_t) -> bool {
+        let res = self.len != 0;
+        if res {
+            self.len -= 1;
+        }
+        res
+    }
+}
+
+struct CStrBound;
+
+impl MemBound for CStrBound {
+    fn len(&self, data: *const char_t) -> usize {
+        unsafe { strlen(data) }
+    }
+    fn test(&mut self, data: char_t) -> bool {
+        data != 0
+    }
+}
+
+struct AndBound<B1: MemBound, B2: MemBound> {
+    b1: B1,
+    b2: B2,
+}
+
+impl<B1: MemBound, B2: MemBound> AndBound<B1, B2> {
+    pub fn new(b1: B1, b2: B2) -> Self {
+        Self { b1, b2 }
+    }
+}
+
+impl<B1: MemBound, B2: MemBound> MemBound for AndBound<B1, B2> {
+    fn test(&mut self, data: char_t) -> bool {
+        self.b1.test(data) && self.b2.test(data)
+    }
+}
+
+#[inline]
+fn iter_copy<'a, 'b>(
+    dst: impl Iterator<Item = &'a mut char_t>,
+    src: impl Iterator<Item = &'b char_t>,
+) {
+    for (dst, src) in dst.zip(src) {
+        *dst = *src;
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn memcpy(dst: *mut char_t, src: *const char_t, n: size_t) -> *mut char_t {
+    copy_nonoverlapping(src, dst, n);
     dst
 }
 
 #[no_mangle]
-pub unsafe extern fn memcmp(m1: *const char_t, m2: *const char_t, n: size_t) -> int_t {
-    let m1 = m1 as *const uchar_t;
-    let m2 = m2 as *const uchar_t;
-    for i in range(0, n as isize) {
-        let v1 = *offset(m1, i) as isize;
-        let v2 = *offset(m2, i) as isize;
-        match v1 - v2 {
-            j if j < 0 => return -1,
-            j if j > 0 => return 1,
-            _ => { },
-        }
-    }
-    0
+pub unsafe extern "C" fn memmove(dst: *mut char_t, src: *const char_t, n: size_t) -> *mut char_t {
+    copy(src, dst, n);
+    dst
 }
 
 #[no_mangle]
-pub unsafe extern fn strcmp(m1: *const char_t, m2: *const char_t) -> int_t {
-    let m1 = m1 as *const uchar_t;
-    let m2 = m2 as *const uchar_t;
-    for i in count(0, 1) {
-        let v1 = *offset(m1, i) as isize;
-        let v2 = *offset(m2, i) as isize;
-        match v1 - v2 {
-            j if j < 0 => return -1,
-            j if j > 0 => return 1,
-            _ => { },
-        }
-        if v1 == 0 {
-            break;
-        }
-    }
-    0
+pub unsafe extern "C" fn strcpy(dst: *mut char_t, src: *const char_t) -> *mut char_t {
+    iter_copy(
+        MemMutIter::from_ptr(dst, NoBound),
+        MemIter::from_ptr(src, CStrBound),
+    );
+    dst
 }
 
 #[no_mangle]
-pub unsafe extern fn strcoll(m1: *const char_t, m2: *const char_t) -> int_t {
+pub unsafe extern "C" fn strncpy(dst: *mut char_t, src: *const char_t, n: size_t) -> *mut char_t {
+    iter_copy(
+        MemMutIter::from_ptr(dst, LenBound { len: n }),
+        MemIter::from_ptr(src, CStrBound)
+            .map(|src| &*src)
+            .chain([0i8].iter().cycle()),
+    );
+    dst
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn strcat(dst: *mut char_t, src: *const char_t) -> *mut char_t {
+    let base = strlen(dst);
+    strcpy(dst.add(base), src);
+    dst
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn strncat(dst: *mut char_t, src: *const char_t, n: size_t) -> *mut char_t {
+    let base = strlen(dst);
+    strncpy(dst.add(base), src, n);
+    dst
+}
+
+#[inline]
+fn iter_cmp<'a>(
+    m1: impl Iterator<Item = &'a char_t>,
+    m2: impl Iterator<Item = &'a char_t>,
+) -> int_t {
+    match m1.cmp(m2) {
+        Ordering::Equal => 0,
+        Ordering::Greater => 1,
+        Ordering::Less => -1,
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn memcmp(m1: *const char_t, m2: *const char_t, n: size_t) -> int_t {
+    iter_cmp(
+        MemIter::from_ptr(m1, LenBound { len: n }),
+        MemIter::from_ptr(m2, LenBound { len: n }),
+    )
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn bcmp(m1: *const char_t, m2: *const char_t, n: size_t) -> int_t {
+    match memcmp(m1, m2, n) {
+        0 => 0,
+        _ => 1,
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn strcmp(m1: *const char_t, m2: *const char_t) -> int_t {
+    iter_cmp(
+        MemIter::from_ptr(m1, CStrBound),
+        MemIter::from_ptr(m2, CStrBound),
+    )
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn strcoll(m1: *const char_t, m2: *const char_t) -> int_t {
     strcmp(m1, m2)
 }
 
 #[no_mangle]
-pub unsafe extern fn strncmp(m1: *const char_t, m2: *const char_t, n: size_t) -> int_t {
-    let m1 = m1 as *const uchar_t;
-    let m2 = m2 as *const uchar_t;
-    for i in range(0, n as isize) {
-        let v1 = *offset(m1, i) as isize;
-        let v2 = *offset(m2, i) as isize;
-        match v1 - v2 {
-            j if j < 0 => return -1,
-            j if j > 0 => return 1,
-            _ => { },
-        }
-        if v1 == 0 {
-            break;
-        }
-    }
-    0
+pub unsafe extern "C" fn strncmp(m1: *const char_t, m2: *const char_t, n: size_t) -> int_t {
+    iter_cmp(
+        MemIter::from_ptr(m1, LenBound { len: n }.and(CStrBound)),
+        MemIter::from_ptr(m2, LenBound { len: n }.and(CStrBound)),
+    )
 }
 
 #[no_mangle]
-pub unsafe extern fn strxfrm(dst: *mut char_t, src: *const char_t, n: size_t) -> size_t {
+pub unsafe extern "C" fn strxfrm(dst: *mut char_t, src: *const char_t, n: size_t) -> size_t {
     let len = strlen(src);
     if len < n {
-        memcpy(dst, src, len+1);
+        memcpy(dst, src, len + 1);
     }
     len
 }
 
-#[no_mangle]
-pub unsafe extern fn memchr(s: *const char_t, c: int_t, n: size_t) -> *const char_t {
-    let c = c as char_t;
-    for i in range(0, n as isize) {
-        if *offset(s, i) == c {
-            return offset(s, i);
+#[inline]
+fn iter_chr<'a>(s: impl Iterator<Item = &'a char_t>, c: char_t) -> Option<usize> {
+    for (i, s) in s.enumerate() {
+        if *s == c {
+            return Some(i);
         }
     }
-    0 as *const char_t
+    None
 }
 
 #[no_mangle]
-pub unsafe extern fn strchr(s: *const char_t, c: int_t) -> *const char_t {
+pub unsafe extern "C" fn memchr(s: *const char_t, c: int_t, n: size_t) -> *const char_t {
+    match iter_chr(MemIter::from_ptr(s, LenBound { len: n }), c as char_t) {
+        Some(offset) => s.add(offset),
+        None => null(),
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn strchr(s: *const char_t, c: int_t) -> *const char_t {
     if c == 0 {
-        return offset(s, strlen(s) as isize);
+        s.add(strlen(s))
+    } else {
+        match iter_chr(MemIter::from_ptr(s, CStrBound), c as char_t) {
+            Some(offset) => s.add(offset),
+            None => null(),
+        }
     }
-    let c = c as char_t;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn strcspn(s1: *const char_t, s2: *const char_t) -> size_t {
     let mut i = 0;
-    while *offset(s, i) != 0 {
-        if *offset(s, i) == c {
-            return offset(s, i);
+    for c in MemIter::from_ptr(s1, CStrBound) {
+        if !strchr(s2, *c as int_t).is_null() {
+            return i;
         }
         i += 1;
     }
-    0 as *const char_t
+    i
 }
 
 #[no_mangle]
-pub unsafe extern fn strcspn(s1: *const char_t, s2: *const char_t) -> size_t {
-    let len = strlen(s2);
-    let mut i = 0;
-    while *offset(s1, i) != 0 {
-        if memchr(s2, *offset(s1, i) as int_t, len) as usize != 0 {
-            break;
-        }
-        i += 1;
-    }
-    i as size_t
-}
-
-#[no_mangle]
-pub unsafe extern fn strpbrk(s1: *const char_t, s2: *const char_t) -> *const char_t {
-    let len = strlen(s2);
-    let mut i = 0;
-    while *offset(s1, i) != 0 {
-        if memchr(s2, *offset(s1, i) as int_t, len) as usize == 0 {
-            return offset(s1, i);
-        }
-        i += 1;
-    }
-    0 as *const char_t
-}
-
-#[no_mangle]
-pub unsafe extern fn strrchr(s: *const char_t, c: int_t) -> *const char_t {
-    let mut last = -1;
-    let mut i = 0;
-    while *offset(s, i) != 0 {
-        if *offset(s, i) as int_t == c {
-            last = i;
-        }
-        i += 1;
-    }
-    match last {
-        -1 => 0 as *const char_t,
-        _  => offset(s, last)
-    }
-}
-
-#[no_mangle]
-pub unsafe extern fn strspn(s1: *const char_t, s2: *const char_t) -> size_t {
-    let len = strlen(s2);
-    let mut i = 0;
-    while *offset(s1, i) != 0 {
-        if memchr(s2, *offset(s1, i) as int_t, len) as usize == 0 {
-            break;
-        }
-        i += 1;
-    }
-    i as size_t
-}
-
-#[no_mangle]
-pub unsafe extern fn strstr(s1: *const char_t, s2: *const char_t) -> *const char_t {
-    let len1 = strlen(s1) as isize;
-    let len2 = strlen(s2) as isize;
-    for i in range(0, len1 - len2) {
-        if memcmp(offset(s1, i), s2, len2 as size_t) == 0 {
-            return offset(s1, i);
+pub unsafe extern "C" fn strpbrk(s1: *const char_t, s2: *const char_t) -> *const char_t {
+    for (i, c) in MemIter::from_ptr(s1, CStrBound).enumerate() {
+        if !strchr(s2, *c as int_t).is_null() {
+            return s1.add(i);
         }
     }
-    0 as *const char_t
+    null()
 }
 
 #[no_mangle]
-pub unsafe extern fn strtok(s1: *mut char_t, s2: *const char_t) -> *const char_t {
+pub unsafe extern "C" fn strrchr(s: *const char_t, c: int_t) -> *const char_t {
+    let n = strlen(s);
+    match iter_chr(
+        MemIter::from_ptr(s, LenBound { len: n }).into_rev(),
+        c as char_t,
+    ) {
+        Some(i) => s.add(n - i - 1),
+        None => null(),
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn strspn(s1: *const char_t, s2: *const char_t) -> size_t {
+    MemIter::from_ptr(s1, CStrBound)
+        .filter(|c| !strchr(s2, **c as int_t).is_null())
+        .count()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn strstr(s1: *const char_t, s2: *const char_t) -> *const char_t {
+    let len1 = strlen(s1);
+    let len2 = strlen(s2);
+    for i in 0..=(len1 - len2) {
+        if memcmp(s1.add(i), s2, len2 as size_t) == 0 {
+            return s1.add(i);
+        }
+    }
+    null()
+}
+
+#[no_mangle]
+#[allow(non_upper_case_globals)]
+pub unsafe extern "C" fn strtok(s1: *mut char_t, s2: *const char_t) -> *const char_t {
     static mut ss: *mut char_t = 0 as *mut char_t;
     static mut len: isize = 0;
     if s1 as usize != 0 {
@@ -247,12 +342,12 @@ pub unsafe extern fn strtok(s1: *mut char_t, s2: *const char_t) -> *const char_t
     let len2 = strlen(s2) as isize;
     let mut i = 0;
     while i < len {
-        if memchr(s2, *offset_mut(ss, i) as int_t, len2 as size_t) as usize != 0 {
+        if memchr(s2, *ss.offset(i) as int_t, len2 as size_t) as usize != 0 {
             break;
         }
         i += 1;
     }
-    ss = offset_mut(ss, i);
+    ss = ss.offset(i);
     len -= i;
     if len == 0 {
         ss = 0 as *mut char_t;
@@ -260,7 +355,7 @@ pub unsafe extern fn strtok(s1: *mut char_t, s2: *const char_t) -> *const char_t
     }
     let mut i = 0;
     while i < len {
-        if memchr(s2, *offset_mut(ss, i) as int_t, len2 as size_t) as usize == 0 {
+        if memchr(s2, *ss.offset(i) as int_t, len2 as size_t) as usize == 0 {
             break;
         }
         i += 1;
@@ -271,41 +366,33 @@ pub unsafe extern fn strtok(s1: *mut char_t, s2: *const char_t) -> *const char_t
         ss = 0 as *mut char_t;
         return tmp as *const _;
     }
-    *offset_mut(ss, i) = 0;
+    *ss.offset(i) = 0;
     let tmp = ss;
-    ss = offset_mut(ss, i+1);
-    len -= i+1;
+    ss = ss.offset(i + 1);
+    len -= i + 1;
     tmp as *const _
 }
 
 #[no_mangle]
-pub unsafe extern fn memset(dst: *mut char_t, c: int_t, n: size_t) -> *mut char_t {
-    let c = c as char_t;
-    for i in range(0, n as isize).rev() {
-        *offset_mut(dst, i) = c;
-    }
+pub unsafe extern "C" fn memset(dst: *mut char_t, c: int_t, n: size_t) -> *mut char_t {
+    iter_copy(
+        MemMutIter::from_ptr(dst, LenBound { len: n }),
+        [(c as char_t)].iter().cycle(),
+    );
     dst
 }
 
 #[no_mangle]
-pub unsafe extern fn strerror(_: int_t) -> *const char_t {
+pub unsafe extern "C" fn strerror(_: int_t) -> *const char_t {
     cs!("u w0t m8?")
 }
 
 #[no_mangle]
-pub unsafe extern fn strlen(s: *const char_t) -> size_t {
-    let mut len = 0;
-    while *offset(s, len) != 0 {
-        len += 1;
-    }
-    len as size_t
+pub unsafe extern "C" fn strlen(s: *const char_t) -> size_t {
+    MemIter::from_ptr(s, CStrBound).count()
 }
 
 #[no_mangle]
-pub unsafe extern fn strnlen(s: *const char_t, n: size_t) -> size_t {
-    let mut len: usize = 0;
-    while *offset(s, len as isize) != 0 && len < (n as usize) {
-        len += 1;
-    }
-    len as size_t
+pub unsafe extern "C" fn strnlen(s: *const char_t, n: size_t) -> size_t {
+    MemIter::from_ptr(s, LenBound { len: n }.and(CStrBound)).count()
 }

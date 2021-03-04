@@ -1,18 +1,18 @@
-pub type char_t     = i8;
-pub type uchar_t    = u8;
-pub type short_t    = i16;
-pub type ushort_t   = u16;
-pub type int_t      = i32;
-pub type uint_t     = u32;
-pub type long_t     = i64;
+pub type char_t = i8;
+pub type uchar_t = u8;
+pub type short_t = i16;
+pub type ushort_t = u16;
+pub type int_t = i32;
+pub type uint_t = u32;
+pub type long_t = i64;
 pub type longlong_t = i64;
-pub type ulong_t    = u64;
-pub type ulonglong_t= i64;
+pub type ulong_t = u64;
+pub type ulonglong_t = i64;
 
 // stddef
-pub type ssize_t   = long_t;
-pub type size_t    = ulong_t;
-pub type ptrdiff_t = long_t;
+pub type ssize_t = isize;
+pub type size_t = usize;
+pub type ptrdiff_t = isize;
 
 // stdint
 pub type int8_t = char_t;
@@ -41,24 +41,20 @@ pub type uint_fast32_t = uint32_t;
 pub type uint_fast64_t = uint64_t;
 pub type intptr_t = long_t;
 pub type uintptr_t = ulong_t;
-pub type intmax_t  = long_t;
+pub type intmax_t = long_t;
 pub type uintmax_t = ulong_t;
 
-#[repr(u8)]
-pub enum void_t {
-    __variant1,
-    __variant2,
-}
+pub type void_t = core::ffi::c_void;
 
-pub type __kernel_size_t    = ulong_t;
-pub type __kernel_ssize_t   = long_t;
+pub type __kernel_size_t = ulong_t;
+pub type __kernel_ssize_t = long_t;
 pub type __kernel_ptrdiff_t = long_t;
 
 pub const NSIG_BPW: usize = 64;
 #[no_mangle]
 pub static _NSIG_BPW: usize = NSIG_BPW;
 
-#[packed]
+#[repr(packed)]
 pub struct epoll_event {
     pub events: u32,
     pub data: u64,
@@ -73,16 +69,16 @@ pub struct stat {
     pub st_uid: uint_t,
     pub st_gid: uint_t,
     pub __pad0: uint_t,
-    pub st_rdev:    ulong_t,
-    pub st_size:    long_t,
+    pub st_rdev: ulong_t,
+    pub st_size: long_t,
     pub st_blksize: long_t,
-    pub st_blocks:  long_t,
+    pub st_blocks: long_t,
 
-    pub st_atime:      ulong_t,
+    pub st_atime: ulong_t,
     pub st_atime_nsec: ulong_t,
-    pub st_mtime:      ulong_t,
+    pub st_mtime: ulong_t,
     pub st_mtime_nsec: ulong_t,
-    pub st_ctime:      ulong_t,
+    pub st_ctime: ulong_t,
     pub st_ctime_nsec: ulong_t,
     pub __unused: [long_t; 3],
 }
@@ -103,27 +99,27 @@ pub struct iocb {
 }
 
 pub struct pt_regs {
-        pub r15: ulong_t,
-        pub r14: ulong_t,
-        pub r13: ulong_t,
-        pub r12: ulong_t,
-        pub bp: ulong_t,
-        pub bx: ulong_t,
-        pub r11: ulong_t,
-        pub r10: ulong_t,
-        pub r9: ulong_t,
-        pub r8: ulong_t,
-        pub ax: ulong_t,
-        pub cx: ulong_t,
-        pub dx: ulong_t,
-        pub si: ulong_t,
-        pub di: ulong_t,
-        pub orig_ax: ulong_t,
-        pub ip: ulong_t,
-        pub cs: ulong_t,
-        pub flags: ulong_t,
-        pub sp: ulong_t,
-        pub ss: ulong_t,
+    pub r15: ulong_t,
+    pub r14: ulong_t,
+    pub r13: ulong_t,
+    pub r12: ulong_t,
+    pub bp: ulong_t,
+    pub bx: ulong_t,
+    pub r11: ulong_t,
+    pub r10: ulong_t,
+    pub r9: ulong_t,
+    pub r8: ulong_t,
+    pub ax: ulong_t,
+    pub cx: ulong_t,
+    pub dx: ulong_t,
+    pub si: ulong_t,
+    pub di: ulong_t,
+    pub orig_ax: ulong_t,
+    pub ip: ulong_t,
+    pub cs: ulong_t,
+    pub flags: ulong_t,
+    pub sp: ulong_t,
+    pub ss: ulong_t,
 }
 
 pub struct stack_t {
@@ -132,12 +128,14 @@ pub struct stack_t {
     pub ss_size: size_t,
 }
 
+#[repr(C)]
 pub struct cap_user_data_t {
     pub effective: u32,
     pub permitted: u32,
     pub inheritable: u32,
 }
 
+#[repr(C)]
 pub struct cap_user_header_t {
     pub version: u32,
     pub pid: int_t,
@@ -167,7 +165,7 @@ pub struct __kernel_fd_set {
 
 pub struct getcpu_cache {
     // XXX size_of
-    pub blob: [ulong_t; 128/8],
+    pub blob: [ulong_t; 128 / 8],
 }
 
 pub struct sysinfo {
@@ -185,7 +183,7 @@ pub struct sysinfo {
     pub freehigh: ulong_t,
     pub mem_unit: u32,
     // XXX size_of
-    pub _f: [char_t; 20-2*8-4],
+    pub _f: [char_t; 20 - 2 * 8 - 4],
 }
 
 #[repr(C)]
@@ -202,4 +200,3 @@ pub struct tm {
     pub tm_gmtoff: long_t,
     pub tm_zone: *const char_t,
 }
-
