@@ -1,6 +1,6 @@
 use crate::types::{char_t, int_t, size_t};
 use core::cmp::Ordering;
-use core::ptr::{copy, copy_nonoverlapping, null};
+use core::ptr::null;
 
 struct MemMutIter<'a, B: MemBound> {
     data: &'a mut char_t,
@@ -14,6 +14,14 @@ impl<'a, B: MemBound> MemMutIter<'a, B> {
             bound,
         }
     }
+
+    pub fn into_rev(self) -> MemMutRevIter<'a, LenBound> {
+        let len = self.bound.len(self.data as *const _);
+        MemMutRevIter::from_ptr(
+            unsafe { (self.data as *mut char_t).add(len - 1) },
+            LenBound { len },
+        )
+    }
 }
 
 impl<'a, B: MemBound> Iterator for MemMutIter<'a, B> {
@@ -23,6 +31,34 @@ impl<'a, B: MemBound> Iterator for MemMutIter<'a, B> {
         if self.bound.test(*self.data) {
             let res = self.data as *mut char_t;
             self.data = unsafe { res.add(1).as_mut().unwrap_unchecked() };
+            Some(unsafe { res.as_mut().unwrap_unchecked() })
+        } else {
+            None
+        }
+    }
+}
+
+struct MemMutRevIter<'a, B: MemBound> {
+    data: &'a mut char_t,
+    bound: B,
+}
+
+impl<'a, B: MemBound> MemMutRevIter<'a, B> {
+    pub fn from_ptr(data: *mut char_t, bound: B) -> Self {
+        Self {
+            data: unsafe { data.as_mut().unwrap_unchecked() },
+            bound,
+        }
+    }
+}
+
+impl<'a, B: MemBound> Iterator for MemMutRevIter<'a, B> {
+    type Item = &'a mut char_t;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.bound.test(*self.data) {
+            let res = self.data as *mut char_t;
+            self.data = unsafe { res.sub(1).as_mut().unwrap_unchecked() };
             Some(unsafe { res.as_mut().unwrap_unchecked() })
         } else {
             None
@@ -41,9 +77,9 @@ impl<'a, B: MemBound> MemIter<'a, B> {
         Self { data, bound }
     }
 
-    pub fn into_rev(self) -> MemIter<'a, LenBound> {
+    pub fn into_rev(self) -> MemRevIter<'a, LenBound> {
         let len = self.bound.len(self.data as *const _);
-        MemIter::from_ptr(
+        MemRevIter::from_ptr(
             unsafe { (self.data as *const char_t).add(len - 1) },
             LenBound { len },
         )
@@ -58,6 +94,34 @@ impl<'a, B: MemBound> Iterator for MemIter<'a, B> {
             let res = self.data;
             self.data = unsafe { (res as *const char_t).add(1).as_ref().unwrap_unchecked() };
             Some(res)
+        } else {
+            None
+        }
+    }
+}
+
+struct MemRevIter<'a, B: MemBound> {
+    data: &'a char_t,
+    bound: B,
+}
+
+impl<'a, B: MemBound> MemRevIter<'a, B> {
+    pub fn from_ptr(data: *const char_t, bound: B) -> Self {
+        Self {
+            data: unsafe { data.as_ref().unwrap_unchecked() },
+            bound,
+        }
+    }
+}
+
+impl<'a, B: MemBound> Iterator for MemRevIter<'a, B> {
+    type Item = &'a char_t;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.bound.test(*self.data) {
+            let res = self.data as *const char_t;
+            self.data = unsafe { res.sub(1).as_ref().unwrap_unchecked() };
+            Some(unsafe { res.as_ref().unwrap_unchecked() })
         } else {
             None
         }
@@ -142,31 +206,54 @@ fn iter_copy<'a, 'b>(
 
 #[no_mangle]
 pub unsafe extern "C" fn memcpy(dst: *mut char_t, src: *const char_t, n: size_t) -> *mut char_t {
-    copy_nonoverlapping(src, dst, n);
+    iter_copy(
+        MemMutIter::from_ptr(dst, NoBound),
+        MemIter::from_ptr(src, LenBound { len: n }),
+    );
     dst
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn memmove(dst: *mut char_t, src: *const char_t, n: size_t) -> *mut char_t {
-    copy(src, dst, n);
-    dst
+    if dst as *const _ == src {
+        dst
+    } else if dst as *const _ < src {
+        memcpy(dst, src, n)
+    } else {
+        iter_copy(
+            MemMutRevIter::from_ptr(dst.add(n - 1), NoBound),
+            MemIter::from_ptr(src, LenBound { len: n }).into_rev(),
+        );
+        dst
+    }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn strcpy(dst: *mut char_t, src: *const char_t) -> *mut char_t {
-    iter_copy(
-        MemMutIter::from_ptr(dst, NoBound),
-        MemIter::from_ptr(src, CStrBound),
-    );
+    for (dst, src) in MemMutIter::from_ptr(dst, NoBound).zip(MemIter::from_ptr(src, NoBound)) {
+        *dst = *src;
+        if *src == 0 {
+            break;
+        }
+    }
     dst
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn strncpy(dst: *mut char_t, src: *const char_t, n: size_t) -> *mut char_t {
-    iter_copy(
-        MemMutIter::from_ptr(dst, LenBound { len: n }),
-        MemIter::from_ptr(src, CStrBound).chain([0i8].iter().cycle()),
-    );
+    let mut zeroed = false;
+    for (dst, src) in
+        MemMutIter::from_ptr(dst, LenBound { len: n }).zip(MemIter::from_ptr(src, NoBound))
+    {
+        if zeroed {
+            *dst = 0;
+        } else {
+            *dst = *src;
+            if *src == 0 {
+                zeroed = true;
+            }
+        }
+    }
     dst
 }
 
@@ -207,10 +294,7 @@ pub unsafe extern "C" fn memcmp(m1: *const char_t, m2: *const char_t, n: size_t)
 #[no_mangle]
 #[deprecated(since = "0.1.0", note = "use `memcmp` instead")]
 pub unsafe extern "C" fn bcmp(m1: *const char_t, m2: *const char_t, n: size_t) -> int_t {
-    match memcmp(m1, m2, n) {
-        0 => 0,
-        _ => 1,
-    }
+    memcmp(m1, m2, n)
 }
 
 #[no_mangle]
@@ -319,7 +403,7 @@ pub unsafe extern "C" fn strstr(s1: *const char_t, s2: *const char_t) -> *const 
     let len1 = strlen(s1);
     let len2 = strlen(s2);
     for i in 0..=(len1 - len2) {
-        if memcmp(s1.add(i), s2, len2 as size_t) == 0 {
+        if memcmp(s1.add(i), s2, len2) == 0 {
             return s1.add(i);
         }
     }
@@ -374,10 +458,9 @@ pub unsafe extern "C" fn strtok(s1: *mut char_t, s2: *const char_t) -> *const ch
 
 #[no_mangle]
 pub unsafe extern "C" fn memset(dst: *mut char_t, c: int_t, n: size_t) -> *mut char_t {
-    iter_copy(
-        MemMutIter::from_ptr(dst, LenBound { len: n }),
-        [(c as char_t)].iter().cycle(),
-    );
+    for dst in MemMutIter::from_ptr(dst, LenBound { len: n }) {
+        *dst = c as i8;
+    }
     dst
 }
 

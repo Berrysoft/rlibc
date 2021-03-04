@@ -203,7 +203,9 @@ int main(int argc, char const* argv[])
         puts("1");
     }
     char buffer[4];
-    strcpy(buffer, "abc");
+    memcpy(buffer, "abc", 4);
+    puts(buffer);
+    memmove(buffer + 1, buffer, 2);
     puts(buffer);
     return 0;
 }
