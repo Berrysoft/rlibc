@@ -165,9 +165,7 @@ pub unsafe extern "C" fn strcpy(dst: *mut char_t, src: *const char_t) -> *mut ch
 pub unsafe extern "C" fn strncpy(dst: *mut char_t, src: *const char_t, n: size_t) -> *mut char_t {
     iter_copy(
         MemMutIter::from_ptr(dst, LenBound { len: n }),
-        MemIter::from_ptr(src, CStrBound)
-            .map(|src| &*src)
-            .chain([0i8].iter().cycle()),
+        MemIter::from_ptr(src, CStrBound).chain([0i8].iter().cycle()),
     );
     dst
 }

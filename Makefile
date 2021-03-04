@@ -12,7 +12,7 @@ CLANG			= clang
 CARGO			= cargo
 
 # add -L $(TARGETDIR)/deps for non-native platforms
-CLANGFLAGS		= -target $(TARGET) -I include/rlibc -nostdlib
+CLANGFLAGS		= -target $(TARGET) -I include/rlibc -nostdlib -fno-stack-protector
 
 .PHONY: all directories run clean $(TARGETDIR)/libc.a
 

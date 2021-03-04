@@ -198,6 +198,12 @@ int main(int argc, char const* argv[])
     puts("Hello, world!");
     puts(getenv("HOME"));
 
-    memcmp("bbb", "aaa", 3);
+    if (memcmp("bbb", "aaa", 3) > 0)
+    {
+        puts("1");
+    }
+    char buffer[4];
+    strcpy(buffer, "abc");
+    puts(buffer);
     return 0;
 }
