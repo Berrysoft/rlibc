@@ -13,6 +13,7 @@ mod rust;
 mod consts;
 mod types;
 
+#[macro_use]
 pub mod libc;
 pub mod math;
 pub mod posix;
