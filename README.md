@@ -5,8 +5,7 @@ An implementation of libc and POSIX in Rust.
 
 # Compiling
 
-To build, you'll need Make, and a copy of the Rust source.
-* First copy the source of libcore into `./libcore`.
+To build, you'll need make, clang, lld and cargo.
 * Optionally, create a `config.mk` file to specify custom tools and targets.
 * Run `make`
 
@@ -16,13 +15,13 @@ rlibc currently supports part of C99 and POSIX, as well as some OS-specific func
 * crt0 - mostly done
 * mem - mostly done
 * strings - mostly done
-* math - mostly done
+* math - done
 * printing - partial
 * time - partial
 * fs - partial
-* mm - none
+* mm - partial
 * environment - partial
-* dl - almost none
+* dl - none and WON'T
 * signals - almost none
 * pthreads - NONE
 * thread-local - NONE
