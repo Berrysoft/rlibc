@@ -5,6 +5,7 @@ macro_rules! cs {
     };
 }
 
+#[macro_export]
 macro_rules! forward {
     ($sys:ident, $($p:expr),*) => {
         match $sys($($p),*) {
@@ -14,6 +15,28 @@ macro_rules! forward {
                 -1
             },
             n => n,
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! libc_print {
+    ($($arg:tt)*) => {
+        #[allow(unused_must_use)]
+        {
+            use core::fmt::Write;
+            core::write!(&mut $crate::libc::stdio::__stdout, $($arg)*);
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! libc_println {
+    ($($arg:tt)*) => {
+        #[allow(unused_must_use)]
+        {
+            use core::fmt::Write;
+            core::writeln!(&mut $crate::libc::stdio::__stdout, $($arg)*);
         }
     };
 }

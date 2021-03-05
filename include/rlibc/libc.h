@@ -128,6 +128,8 @@ void* mmap(void* addr, size_t length, int prot, int flags, int fd, off_t offset)
 int munmap(void* addr, size_t length);
 int brk(void*);
 void* sbrk(intptr_t);
+void* malloc(size_t);
+void free(void*);
 
 /* Environment */
 extern int errno;

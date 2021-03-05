@@ -125,26 +125,6 @@ impl Write for EmptyBufferFile {
     }
 }
 
-#[macro_export]
-macro_rules! libc_print {
-    ($($arg:tt)*) => {
-        #[allow(unused_must_use)]
-        {
-            core::write!(&mut $crate::libc::stdio::__stdout, $($arg)*);
-        }
-    };
-}
-
-#[macro_export]
-macro_rules! libc_println {
-    ($($arg:tt)*) => {
-        #[allow(unused_must_use)]
-        {
-            core::writeln!(&mut $crate::libc::stdio::__stdout, $($arg)*);
-        }
-    };
-}
-
 type Result<T> = core::result::Result<T, Error>;
 
 #[inline]

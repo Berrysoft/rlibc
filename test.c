@@ -197,16 +197,8 @@ void test_math()
     test_pow();
 }
 
-void test_all()
+void test_string()
 {
-    test_ctypes();
-    test_math();
-}
-
-int main(int argc, char const* argv[])
-{
-    test_all();
-
     puts("Hello, world!");
     puts(getenv("HOME"));
 
@@ -229,5 +221,27 @@ int main(int argc, char const* argv[])
         pch = strtok(NULL, " ,.-");
     }
     printf("abc%c%lc%%%s\n", '%', L'💯', "abc💯");
+}
+
+void test_alloc()
+{
+    char* buffer = malloc(4);
+    strcpy(buffer, "123");
+    puts(buffer);
+    free(buffer);
+}
+
+void test_all()
+{
+    test_ctypes();
+    test_math();
+    test_string();
+    test_alloc();
+}
+
+int main(int argc, char const* argv[])
+{
+    test_all();
+
     return 0;
 }

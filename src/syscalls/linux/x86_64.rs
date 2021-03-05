@@ -105,7 +105,24 @@ syscall!(005, sys_fstat, uint_t, *mut stat);
 syscall!(006, sys_lstat, *const char_t, *mut stat);
 syscall!(007, sys_poll, *mut pollfd, uint_t, long_t);
 syscall!(008, sys_lseek, uint_t, off_t, uint_t);
-syscall!(009, sys_mmap, ulong_t, ulong_t, ulong_t, ulong_t, ulong_t, ulong_t);
+#[inline(always)]
+#[no_mangle]
+pub unsafe extern "C" fn sys_mmap(
+    a: ulong_t,
+    b: ulong_t,
+    c: ulong_t,
+    d: ulong_t,
+    e: ulong_t,
+    f: ulong_t,
+) -> long_t {
+    let mut ret = 009;
+    llvm_asm!("syscall" :
+        "+{rax}"(ret) :
+        "{rdi}"(a), "{rsi}"(b), "{rdx}"(c), "{r10}"(d) "{r8}"(e), "{r9}"(f) :
+        "rdi", "rsi", "rdx", "rcx", "r8", "r9", "r10", "r11", "memory" :
+        "volatile");
+    ret
+}
 syscall!(010, sys_mprotect, ulong_t, size_t, ulong_t);
 syscall!(011, sys_munmap, ulong_t, size_t);
 syscall!(012, sys_brk, ulong_t);

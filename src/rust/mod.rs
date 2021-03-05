@@ -6,10 +6,11 @@ pub mod macros;
 #[cfg(target_arch = "x86_64")]
 pub mod x86_64;
 
+pub mod alloc;
 pub mod rand;
 
-use core;
 use core::panic::PanicInfo;
+use core::{self, fmt::Write};
 
 #[lang = "eh_personality"]
 unsafe extern "C" fn rust_eh_personality() {
@@ -17,6 +18,11 @@ unsafe extern "C" fn rust_eh_personality() {
 }
 
 #[lang = "panic_impl"]
-pub extern "C" fn rust_begin_panic(_: &PanicInfo) -> ! {
-    unsafe { crate::posix::stdlib::abort() }
+unsafe extern "C" fn rust_begin_panic(info: &PanicInfo) -> ! {
+    if let Some(msg) = info.message() {
+        crate::libc::stdio::__stderr
+            .write_fmt(*msg)
+            .unwrap_or_default();
+    }
+    crate::posix::stdlib::abort()
 }
