@@ -26,7 +26,7 @@ pub unsafe extern "C" fn time(time: *mut time_t) -> time_t {
 
 #[no_mangle]
 pub unsafe extern "C" fn gettimeofday(tv: *mut timeval, tz: *mut timezone) -> int_t {
-    forward!(sys_gettimeofday, tv, tz)
+    forward!(sys_gettimeofday, tv, tz) as _
 }
 
 pub static mut GMTIME_TM: tm = tm {

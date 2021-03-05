@@ -58,7 +58,7 @@ pub unsafe extern "C" fn sbrk(increment: intptr_t) -> *const void_t {
 /// process's data segment. This limit affects calls to brk(2) and sbrk(2).
 #[no_mangle]
 pub unsafe extern "C" fn getrlimit(resource: int_t, rlim: *mut rlimit) -> int_t {
-    forward!(sys_getrlimit, resource as uint_t, rlim)
+    forward!(sys_getrlimit, resource as uint_t, rlim) as _
 }
 
 /// Map or unmap files or devices into memory.
@@ -71,20 +71,15 @@ pub unsafe extern "C" fn mmap(
     fd: int_t,
     offset: off_t,
 ) -> *mut void_t {
-    match sys_mmap(
+    forward!(
+        sys_mmap,
         addr as ulong_t,
         length as ulong_t,
         prot as ulong_t,
         flags as ulong_t,
         fd as ulong_t,
-        offset as ulong_t,
-    ) {
-        n if n < 0 => {
-            errno = -n as i32;
-            MAP_FAILED
-        }
-        n => n as _,
-    }
+        offset as ulong_t
+    ) as _
 }
 
 #[no_mangle]
@@ -106,10 +101,10 @@ pub unsafe extern "C" fn mremap(
 
 #[no_mangle]
 pub unsafe extern "C" fn madvise(addr: *mut void_t, length: size_t, advice: int_t) -> int_t {
-    forward!(sys_madvise, addr as ulong_t, length, advice)
+    forward!(sys_madvise, addr as ulong_t, length, advice) as _
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn munmap(addr: *mut void_t, length: size_t) -> int_t {
-    forward!(sys_munmap, addr as ulong_t, length)
+    forward!(sys_munmap, addr as ulong_t, length) as _
 }

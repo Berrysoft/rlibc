@@ -42,13 +42,7 @@ pub unsafe extern "C" fn remove(file: *const char_t) -> int_t {
 
 #[no_mangle]
 pub unsafe extern "C" fn rename(old: *const char_t, new: *const char_t) -> int_t {
-    match sys_rename(old, new) {
-        n if n < 0 => {
-            errno = -n;
-            -1
-        }
-        _ => 0,
-    }
+    forward!(sys_rename, old, new) as _
 }
 
 pub struct FILE {

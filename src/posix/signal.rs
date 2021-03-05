@@ -1,4 +1,3 @@
-use crate::libc::errno::errno;
 use crate::posix::pm::_exit;
 use crate::posix::unistd::getpid;
 use crate::syscalls::sys_kill;
@@ -17,18 +16,6 @@ struct sigaction_s {
     __sigaction_u: __sigaction_u_t,
     sa_mask: sigset_t,
     sa_flags: int_t,
-}
-
-macro_rules! forward {
-    ($sys:ident, $($p:expr),*) => {
-        match $sys($($p),+) {
-            n if n < 0 => {
-                errno = -n;
-                -1
-            },
-            n => n,
-        }
-    };
 }
 
 pub mod Signals {
@@ -66,5 +53,5 @@ pub unsafe extern "C" fn signal(_sig: int_t, _func: sighandler_t) -> sighandler_
 /// Send a signal to a process or a group of processes.
 #[no_mangle]
 pub unsafe extern "C" fn kill(pid: pid_t, sig: int_t) -> int_t {
-    forward!(sys_kill, pid, sig)
+    forward!(sys_kill, pid, sig) as _
 }

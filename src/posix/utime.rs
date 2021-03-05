@@ -17,8 +17,8 @@ pub unsafe extern "C" fn utime(path: *const char_t, times: *const utimbuf) -> in
                 tv_usec: 0,
             },
         ];
-        forward!(sys_utimes, path, tv.as_mut_ptr())
+        forward!(sys_utimes, path, tv.as_mut_ptr()) as _
     } else {
-        forward!(sys_utimes, path, 0 as *mut timeval)
+        forward!(sys_utimes, path, 0 as *mut timeval) as _
     }
 }

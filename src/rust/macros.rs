@@ -11,8 +11,8 @@ macro_rules! forward {
         match $sys($($p),*) {
             n if n < 0 => {
                 use $crate::libc::errno::{errno};
-                errno = -n;
-                -1
+                errno = -n as i32;
+                -1i64
             },
             n => n,
         }
