@@ -37,7 +37,7 @@ $(TARGETDIR)/test.o: test.c include/rlibc/libc.h
 	$(CLANG) $(CLANGFLAGS) -c $< -o $@
 
 $(TARGETDIR)/test: $(TARGETDIR)/crt0.o $(TARGETDIR)/test.o $(TARGETDIR)/libc.a
-	$(LD) -e start $^ -o $@
+	$(LD) $^ -o $@
 
 run: all
 	$(TARGETDIR)/test

@@ -11,8 +11,6 @@
 
 extern crate core;
 
-pub use rust::x86_64::linux::start::__libc_start_main;
-
 #[macro_use]
 mod rust;
 

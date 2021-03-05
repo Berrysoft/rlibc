@@ -1,6 +1,6 @@
 .text
-.global start
-start:
+.global _start
+_start:
 	xor %rbp,%rbp   /* rbp:undefined -> mark as zero 0 (ABI) */
 	pop %rdi        /* 1nd arg: argc */
 	mov %rsp,%rsi   /* 2rd arg: argv */

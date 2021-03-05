@@ -9,7 +9,7 @@ extern "C" {
 /// It stores the addresses of the stack arguments, invokes main(), and passes
 /// the return status to exit().
 #[no_mangle]
-pub unsafe extern "C" fn __libc_start_main(argc: usize, argv: *const *const char_t) {
+pub unsafe extern "C" fn __libc_start_main(argc: usize, argv: *const *const char_t) -> ! {
     ARGC = argc;
     ARGV = argv;
     ENVP = ARGV.offset(ARGC as isize + 1);
@@ -20,5 +20,5 @@ pub unsafe extern "C" fn __libc_start_main(argc: usize, argv: *const *const char
     }
     ENVC = envc as usize - ENVP as usize - 1;
 
-    exit(main(ARGC as int_t, ARGV, ENVP));
+    exit(main(ARGC as int_t, ARGV, ENVP))
 }
