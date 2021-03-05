@@ -7,12 +7,13 @@ pub use crate::posix::pm::{_Exit, _exit, abort, atexit, exit};
 use crate::rust::rand::{os_rand, Rand};
 use crate::types::{char_t, int_t, size_t};
 use core::mem::MaybeUninit;
+use core::ptr::null;
 use core::slice::{from_raw_parts, from_raw_parts_mut};
 use core::str::from_utf8_unchecked_mut;
 
-pub static mut ARGV: *const *const char_t = 0 as *const *const char_t;
+pub static mut ARGV: *const *const char_t = null();
 pub static mut ARGC: usize = 0;
-pub static mut ENVP: *const *const char_t = 0 as *const *const char_t;
+pub static mut ENVP: *const *const char_t = null();
 pub static mut ENVC: usize = 0;
 
 const K_ENV_MAXKEYLEN: size_t = 512;
@@ -29,21 +30,21 @@ pub unsafe fn get_envp() -> &'static [*const char_t] {
 pub unsafe extern "C" fn getenv(key: *const char_t) -> *const char_t {
     let len = strnlen(key, K_ENV_MAXKEYLEN);
     for &env in get_envp().iter() {
-        if strncmp(key, env, len) == 0 && *env.offset(len as isize) == '=' as i8 {
-            return env.offset((len as isize) + 1);
+        if strncmp(key, env, len) == 0 && *env.add(len) == b'=' as _ {
+            return env.add(len + 1);
         }
     }
-    0 as *const char_t
+    null()
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn setenv(key: *const char_t, val: *const char_t, overwrite: int_t) -> int_t {
-    _exit(1); // TODO implement mutable environment
+    unimplemented!(); // TODO implement mutable environment
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn unsetenv(key: *const char_t) -> int_t {
-    _exit(1); // TODO implement mutable environment
+    unimplemented!(); // TODO implement mutable environment
 }
 
 #[no_mangle]
