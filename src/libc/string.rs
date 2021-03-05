@@ -1,5 +1,5 @@
 use crate::types::{char_t, int_t, size_t};
-pub use compiler_builtins::mem;
+pub use compiler_builtins::mem::{memcmp, memcpy, memmove, memset};
 use core::cmp::Ordering;
 use core::ptr::{null, null_mut};
 use core::slice::from_raw_parts_mut;
@@ -160,15 +160,15 @@ impl<B1: MemBound, B2: MemBound> MemBound for AndBound<B1, B2> {
     }
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn memcpy(dst: *mut char_t, src: *const char_t, n: size_t) -> *mut char_t {
-    mem::memcpy(dst as _, src as _, n) as _
-}
+// #[no_mangle]
+// pub unsafe extern "C" fn memcpy(dst: *mut char_t, src: *const char_t, n: size_t) -> *mut char_t {
+//     mem::memcpy(dst as _, src as _, n) as _
+// }
 
-#[no_mangle]
-pub unsafe extern "C" fn memmove(dst: *mut char_t, src: *const char_t, n: size_t) -> *mut char_t {
-    mem::memmove(dst as _, src as _, n) as _
-}
+// #[no_mangle]
+// pub unsafe extern "C" fn memmove(dst: *mut char_t, src: *const char_t, n: size_t) -> *mut char_t {
+//     mem::memmove(dst as _, src as _, n) as _
+// }
 
 #[no_mangle]
 pub unsafe extern "C" fn strcpy(dst: *mut char_t, src: *const char_t) -> *mut char_t {
@@ -225,15 +225,15 @@ fn iter_cmp<'a>(
     }
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn memcmp(m1: *const char_t, m2: *const char_t, n: size_t) -> int_t {
-    mem::memcmp(m1 as _, m2 as _, n)
-}
+// #[no_mangle]
+// pub unsafe extern "C" fn memcmp(m1: *const char_t, m2: *const char_t, n: size_t) -> int_t {
+//     mem::memcmp(m1 as _, m2 as _, n)
+// }
 
-#[no_mangle]
-unsafe extern "C" fn bcmp(m1: *const char_t, m2: *const char_t, n: size_t) -> int_t {
-    mem::bcmp(m1 as _, m2 as _, n)
-}
+// #[no_mangle]
+// unsafe extern "C" fn bcmp(m1: *const char_t, m2: *const char_t, n: size_t) -> int_t {
+//     mem::bcmp(m1 as _, m2 as _, n)
+// }
 
 #[no_mangle]
 pub unsafe extern "C" fn strcmp(m1: *const char_t, m2: *const char_t) -> int_t {
@@ -260,7 +260,7 @@ pub unsafe extern "C" fn strncmp(m1: *const char_t, m2: *const char_t, n: size_t
 pub unsafe extern "C" fn strxfrm(dst: *mut char_t, src: *const char_t, n: size_t) -> size_t {
     let len = strlen(src);
     if len < n {
-        memcpy(dst, src, len + 1);
+        memcpy(dst as _, src as _, len + 1);
     }
     len
 }
@@ -341,7 +341,7 @@ pub unsafe extern "C" fn strstr(s1: *const char_t, s2: *const char_t) -> *const 
     let len1 = strlen(s1);
     let len2 = strlen(s2);
     for i in 0..=(len1 - len2) {
-        if memcmp(s1.add(i), s2, len2) == 0 {
+        if memcmp(s1.add(i) as _, s2 as _, len2) == 0 {
             return s1.add(i);
         }
     }
@@ -384,10 +384,10 @@ pub unsafe extern "C" fn strtok(s1: *mut char_t, s2: *const char_t) -> *const ch
     }
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn memset(dst: *mut char_t, c: int_t, n: size_t) -> *mut char_t {
-    mem::memset(dst as _, c, n) as _
-}
+// #[no_mangle]
+// pub unsafe extern "C" fn memset(dst: *mut char_t, c: int_t, n: size_t) -> *mut char_t {
+//     mem::memset(dst as _, c, n) as _
+// }
 
 #[no_mangle]
 pub unsafe extern "C" fn strerror(_: int_t) -> *const char_t {

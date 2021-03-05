@@ -2,17 +2,20 @@
 #![allow(non_snake_case)]
 #![feature(
     allocator_api,
+    compiler_builtins,
     core_intrinsics,
     c_variadic,
     default_alloc_error_handler,
     lang_items,
     llvm_asm,
     option_result_unwrap_unchecked,
-    panic_info_message
+    panic_info_message,
+    rustc_private
 )]
 #![no_std]
 
 extern crate alloc;
+extern crate compiler_builtins;
 extern crate core;
 
 #[macro_use]

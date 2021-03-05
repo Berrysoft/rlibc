@@ -1,6 +1,5 @@
 use crate::posix::stdlib::{exit, ARGC, ARGV, AUXV, AUX_CNT, ENVC, ENVP};
 use crate::types::{char_t, int_t};
-use core::mem::MaybeUninit;
 
 extern "C" {
     fn main(argc: int_t, argv: *const *const char_t, envp: *const *const char_t) -> int_t;

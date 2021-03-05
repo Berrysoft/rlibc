@@ -6,8 +6,8 @@ edition = "2018"
 readme = "README.md"
 
 [dependencies]
-compiler_builtins = {version = "0.1", features = ["mem", "mangled-names"]}
 libm = "0.2"
+widestring = { version = "0.4", default-features = false, features = ["alloc"] }
 
 [lib]
 crate-type = ["staticlib"]

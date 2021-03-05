@@ -9,6 +9,9 @@ pub mod x86_64;
 pub mod alloc;
 pub mod rand;
 
+use crate::libc::stdio::*;
+use crate::posix::stdlib::abort;
+use core::alloc::Layout;
 use core::panic::PanicInfo;
 use core::{self, fmt::Write};
 
@@ -20,9 +23,13 @@ unsafe extern "C" fn rust_eh_personality() {
 #[lang = "panic_impl"]
 unsafe extern "C" fn rust_begin_panic(info: &PanicInfo) -> ! {
     if let Some(msg) = info.message() {
-        crate::libc::stdio::__stderr
-            .write_fmt(*msg)
-            .unwrap_or_default();
+        __stderr.write_fmt(*msg).unwrap_or_default();
+        __stderr.write_char('\n').unwrap_or_default();
     }
-    crate::posix::stdlib::abort()
+    abort()
+}
+
+#[lang = "oom"]
+unsafe fn oom_impl(layout: Layout) -> ! {
+    panic!("Out of memory: {:?}", layout)
 }

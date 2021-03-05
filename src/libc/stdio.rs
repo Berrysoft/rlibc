@@ -4,11 +4,13 @@ use crate::libc::string::{strchr, strlen};
 use crate::posix::unistd::{rmdir, unlink};
 use crate::syscalls::{sys_rename, sys_write};
 use crate::types::*;
+use alloc::string::String;
 use core::ffi::VaList;
 use core::fmt::{Error, Write};
 use core::intrinsics::copy_nonoverlapping;
 use core::slice::from_raw_parts;
 use core::str::from_utf8_unchecked;
+use widestring::U32CStr;
 
 static _IOFBF: int_t = 0;
 static _IOLBF: int_t = 1;
@@ -293,9 +295,11 @@ unsafe fn vprintf_impl(
                         len
                     }
                     FormatSpec::Long => {
-                        let _s: *mut wchar_t = vlist.arg();
-                        // Needs alloc
-                        todo!()
+                        let s: *mut wchar_t = vlist.arg();
+                        let s = U32CStr::from_ptr_str(s);
+                        let s = s.to_string_lossy();
+                        buf.write_str(&s)?;
+                        s.len()
                     }
                     _ => {
                         return Err(Error);
@@ -315,9 +319,10 @@ unsafe fn vprintf_impl(
                             return Err(Error);
                         }
                     };
-                    core::write!(buf, "{}", value)?;
-                    // Needs alloc to determine length
-                    todo!()
+                    let mut s = String::new();
+                    write!(&mut s, "{}", value)?;
+                    buf.write_str(&s)?;
+                    s.len()
                 }
                 _ => {
                     return Err(Error);
