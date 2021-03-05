@@ -226,7 +226,8 @@ int main(int argc, char const* argv[])
     while (pch)
     {
         puts(pch);
-        pch = strtok(0, " ,.-");
+        pch = strtok(NULL, " ,.-");
     }
+    printf("abc%c%lc%%%s\n", '%', L'💯', "abc💯");
     return 0;
 }

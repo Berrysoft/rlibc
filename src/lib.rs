@@ -1,6 +1,12 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
-#![feature(core_intrinsics, lang_items, llvm_asm, option_result_unwrap_unchecked)]
+#![feature(
+    core_intrinsics,
+    c_variadic,
+    lang_items,
+    llvm_asm,
+    option_result_unwrap_unchecked
+)]
 #![no_std]
 
 extern crate core;

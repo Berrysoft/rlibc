@@ -22,9 +22,11 @@ typedef uint32_t uid_t;
 typedef uint32_t gid_t;
 typedef unsigned long clock_t;
 typedef long time_t;
+typedef void* va_list;
 
 #define nelem(x) (sizeof(x) / sizeof((x)[0]))
 #define offsetof(s, m) (size_t)(&(((s*)0)->m))
+#define NULL 0
 
 /* Types */
 int isalnum(int);
@@ -61,9 +63,6 @@ char* strerror(int);
 size_t strnlen(const char*, size_t);
 size_t strlen(const char*);
 
-/* I/O */
-int puts(const char*);
-
 /* Filesystem */
 typedef struct FILE FILE;
 
@@ -74,6 +73,19 @@ extern FILE __stderr;
 #define stdin &__stdin
 #define stdout &__stdout
 #define stderr &__stderr
+
+/* I/O */
+int puts(const char*);
+int fputs(const char*, FILE*);
+int fputc(int, FILE*);
+#define putc(c, f) (fputc((c), (f)))
+
+int printf(const char* fmt, ...);
+
+int vprintf(const char* fmt, va_list);
+int vfprintf(FILE*, const char* fmt, va_list);
+int vsprintf(char*, const char* fmt, va_list);
+int vsnprintf(char*, size_t, const char* fmt, va_list);
 
 #define _IOFBF 0
 #define _IOLBF 1

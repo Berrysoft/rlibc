@@ -19,6 +19,12 @@ pub type ptrdiff_t = isize;
 // stdint
 pub type intptr_t = isize;
 pub type uintptr_t = usize;
+pub type intmax_t = long_t;
+pub type uintmax_t = ulong_t;
+
+// wchar
+pub type wchar_t = u32;
+pub type wint_t = u32;
 
 pub type void_t = core::ffi::c_void;
 
