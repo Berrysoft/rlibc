@@ -4,7 +4,7 @@ use crate::libc::string::{strchr, strlen};
 use crate::posix::unistd::{rmdir, unlink};
 use crate::syscalls::{sys_rename, sys_write};
 use crate::types::*;
-use alloc::string::String;
+use alloc::format;
 use core::ffi::VaList;
 use core::fmt::{Error, Write};
 use core::intrinsics::copy_nonoverlapping;
@@ -239,6 +239,41 @@ unsafe fn vprintf_impl(
                 buf.write_str(from_utf8_unchecked(from_raw_parts(current as _, len as _)))?;
             }
             index = index.add(1);
+            let (pad, off) = {
+                let mut off = 0;
+                let mut pad: usize = 0;
+                while (*index.add(off) as u8 as char).is_ascii_digit() {
+                    pad *= 10;
+                    pad += (*index.add(off) as u8 - b'0') as usize;
+                    off += 1;
+                }
+                if off == 0 {
+                    (None, off)
+                } else {
+                    (Some(pad), off)
+                }
+            };
+            index = index.add(off);
+            let (prc, off) = if *index as u8 == b'.' {
+                index = index.add(1);
+                let mut off = 0;
+                let mut prc: usize = 0;
+                while (*index.add(off) as u8 as char).is_ascii_digit() {
+                    prc *= 10;
+                    prc += (*index.add(off) as u8 - b'0') as usize;
+                    off += 1;
+                }
+                if off == 0 {
+                    (None, Some(off))
+                } else {
+                    (Some(prc), Some(off))
+                }
+            } else {
+                (None, None)
+            };
+            if let Some(off) = off {
+                index = index.add(off);
+            }
             let (spec, off) = match *index as u8 {
                 b'l' => {
                     if *index.add(1) as u8 == b'l' {
@@ -319,8 +354,16 @@ unsafe fn vprintf_impl(
                             return Err(Error);
                         }
                     };
-                    let mut s = String::new();
-                    write!(&mut s, "{}", value)?;
+                    let s = if let Some(prc) = prc {
+                        format!("{:01$}", value, prc)
+                    } else {
+                        format!("{}", value)
+                    };
+                    let s = if let Some(pad) = pad {
+                        format!("{:>1$}", s, pad)
+                    } else {
+                        s
+                    };
                     buf.write_str(&s)?;
                     s.len()
                 }

@@ -160,16 +160,6 @@ impl<B1: MemBound, B2: MemBound> MemBound for AndBound<B1, B2> {
     }
 }
 
-// #[no_mangle]
-// pub unsafe extern "C" fn memcpy(dst: *mut char_t, src: *const char_t, n: size_t) -> *mut char_t {
-//     mem::memcpy(dst as _, src as _, n) as _
-// }
-
-// #[no_mangle]
-// pub unsafe extern "C" fn memmove(dst: *mut char_t, src: *const char_t, n: size_t) -> *mut char_t {
-//     mem::memmove(dst as _, src as _, n) as _
-// }
-
 #[no_mangle]
 pub unsafe extern "C" fn strcpy(dst: *mut char_t, src: *const char_t) -> *mut char_t {
     for (dst, src) in MemMutIter::from_ptr(dst, NoBound).zip(MemIter::from_ptr(src, NoBound)) {
@@ -224,16 +214,6 @@ fn iter_cmp<'a>(
         Ordering::Less => -1,
     }
 }
-
-// #[no_mangle]
-// pub unsafe extern "C" fn memcmp(m1: *const char_t, m2: *const char_t, n: size_t) -> int_t {
-//     mem::memcmp(m1 as _, m2 as _, n)
-// }
-
-// #[no_mangle]
-// unsafe extern "C" fn bcmp(m1: *const char_t, m2: *const char_t, n: size_t) -> int_t {
-//     mem::bcmp(m1 as _, m2 as _, n)
-// }
 
 #[no_mangle]
 pub unsafe extern "C" fn strcmp(m1: *const char_t, m2: *const char_t) -> int_t {
@@ -383,11 +363,6 @@ pub unsafe extern "C" fn strtok(s1: *mut char_t, s2: *const char_t) -> *const ch
         }
     }
 }
-
-// #[no_mangle]
-// pub unsafe extern "C" fn memset(dst: *mut char_t, c: int_t, n: size_t) -> *mut char_t {
-//     mem::memset(dst as _, c, n) as _
-// }
 
 #[no_mangle]
 pub unsafe extern "C" fn strerror(_: int_t) -> *const char_t {

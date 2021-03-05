@@ -221,7 +221,7 @@ void test_string()
         pch = strtok(NULL, " ,.-");
     }
     printf("abc%c%lc%%%s\n", '%', L'💯', "abc💯");
-    printf("%lc == %d\n", L'💯', 100);
+    printf("%lc ==%4.3d\n", L'💯', 100);
 }
 
 void test_alloc()
