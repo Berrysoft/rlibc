@@ -186,9 +186,21 @@ void test_ctypes()
     test_toupper();
 }
 
+void test_pow()
+{
+    ASSERT(powf(2, 2) == 4.0f, "powf");
+    ASSERT(pow(2, 2) == 4.0, "pow");
+}
+
+void test_math()
+{
+    test_pow();
+}
+
 void test_all()
 {
     test_ctypes();
+    test_math();
 }
 
 int main(int argc, char const* argv[])
