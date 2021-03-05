@@ -207,5 +207,14 @@ int main(int argc, char const* argv[])
     puts(buffer);
     memmove(buffer + 1, buffer, 2);
     puts(buffer);
+
+    char str[] = "- This, a sample string. ";
+    puts(str);
+    char* pch = strtok(str, " ,.-");
+    while (pch)
+    {
+        puts(pch);
+        pch = strtok(0, " ,.-");
+    }
     return 0;
 }

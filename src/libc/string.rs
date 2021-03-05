@@ -1,6 +1,8 @@
 use crate::types::{char_t, int_t, size_t};
+pub use compiler_builtins::mem::{memcmp, memcpy, memmove, memset};
 use core::cmp::Ordering;
-use core::ptr::null;
+use core::ptr::{null, null_mut};
+use core::slice::from_raw_parts_mut;
 
 struct MemMutIter<'a, B: MemBound> {
     data: &'a mut char_t,
@@ -14,14 +16,6 @@ impl<'a, B: MemBound> MemMutIter<'a, B> {
             bound,
         }
     }
-
-    pub fn into_rev(self) -> MemMutRevIter<'a, LenBound> {
-        let len = self.bound.len(self.data as *const _);
-        MemMutRevIter::from_ptr(
-            unsafe { (self.data as *mut char_t).add(len - 1) },
-            LenBound { len },
-        )
-    }
 }
 
 impl<'a, B: MemBound> Iterator for MemMutIter<'a, B> {
@@ -31,34 +25,6 @@ impl<'a, B: MemBound> Iterator for MemMutIter<'a, B> {
         if self.bound.test(*self.data) {
             let res = self.data as *mut char_t;
             self.data = unsafe { res.add(1).as_mut().unwrap_unchecked() };
-            Some(unsafe { res.as_mut().unwrap_unchecked() })
-        } else {
-            None
-        }
-    }
-}
-
-struct MemMutRevIter<'a, B: MemBound> {
-    data: &'a mut char_t,
-    bound: B,
-}
-
-impl<'a, B: MemBound> MemMutRevIter<'a, B> {
-    pub fn from_ptr(data: *mut char_t, bound: B) -> Self {
-        Self {
-            data: unsafe { data.as_mut().unwrap_unchecked() },
-            bound,
-        }
-    }
-}
-
-impl<'a, B: MemBound> Iterator for MemMutRevIter<'a, B> {
-    type Item = &'a mut char_t;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.bound.test(*self.data) {
-            let res = self.data as *mut char_t;
-            self.data = unsafe { res.sub(1).as_mut().unwrap_unchecked() };
             Some(unsafe { res.as_mut().unwrap_unchecked() })
         } else {
             None
@@ -194,40 +160,6 @@ impl<B1: MemBound, B2: MemBound> MemBound for AndBound<B1, B2> {
     }
 }
 
-#[inline]
-fn iter_copy<'a, 'b>(
-    dst: impl Iterator<Item = &'a mut char_t>,
-    src: impl Iterator<Item = &'b char_t>,
-) {
-    for (dst, src) in dst.zip(src) {
-        *dst = *src;
-    }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn memcpy(dst: *mut char_t, src: *const char_t, n: size_t) -> *mut char_t {
-    iter_copy(
-        MemMutIter::from_ptr(dst, NoBound),
-        MemIter::from_ptr(src, LenBound { len: n }),
-    );
-    dst
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn memmove(dst: *mut char_t, src: *const char_t, n: size_t) -> *mut char_t {
-    if dst as *const _ == src {
-        dst
-    } else if dst as *const _ < src {
-        memcpy(dst, src, n)
-    } else {
-        iter_copy(
-            MemMutRevIter::from_ptr(dst.add(n - 1), NoBound),
-            MemIter::from_ptr(src, LenBound { len: n }).into_rev(),
-        );
-        dst
-    }
-}
-
 #[no_mangle]
 pub unsafe extern "C" fn strcpy(dst: *mut char_t, src: *const char_t) -> *mut char_t {
     for (dst, src) in MemMutIter::from_ptr(dst, NoBound).zip(MemIter::from_ptr(src, NoBound)) {
@@ -284,20 +216,6 @@ fn iter_cmp<'a>(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn memcmp(m1: *const char_t, m2: *const char_t, n: size_t) -> int_t {
-    iter_cmp(
-        MemIter::from_ptr(m1, LenBound { len: n }),
-        MemIter::from_ptr(m2, LenBound { len: n }),
-    )
-}
-
-#[no_mangle]
-#[deprecated(since = "0.1.0", note = "use `memcmp` instead")]
-pub unsafe extern "C" fn bcmp(m1: *const char_t, m2: *const char_t, n: size_t) -> int_t {
-    memcmp(m1, m2, n)
-}
-
-#[no_mangle]
 pub unsafe extern "C" fn strcmp(m1: *const char_t, m2: *const char_t) -> int_t {
     iter_cmp(
         MemIter::from_ptr(m1, CStrBound),
@@ -322,7 +240,7 @@ pub unsafe extern "C" fn strncmp(m1: *const char_t, m2: *const char_t, n: size_t
 pub unsafe extern "C" fn strxfrm(dst: *mut char_t, src: *const char_t, n: size_t) -> size_t {
     let len = strlen(src);
     if len < n {
-        memcpy(dst, src, len + 1);
+        memcpy(dst as _, src as _, len + 1);
     }
     len
 }
@@ -403,65 +321,47 @@ pub unsafe extern "C" fn strstr(s1: *const char_t, s2: *const char_t) -> *const 
     let len1 = strlen(s1);
     let len2 = strlen(s2);
     for i in 0..=(len1 - len2) {
-        if memcmp(s1.add(i), s2, len2) == 0 {
+        if memcmp(s1.add(i) as _, s2 as _, len2) == 0 {
             return s1.add(i);
         }
     }
     null()
 }
 
-#[no_mangle]
-#[allow(non_upper_case_globals)]
-pub unsafe extern "C" fn strtok(s1: *mut char_t, s2: *const char_t) -> *const char_t {
-    static mut ss: *mut char_t = 0 as *mut char_t;
-    static mut len: isize = 0;
-    if s1 as usize != 0 {
-        ss = s1;
-        len = strlen(ss as *const _) as isize;
-    }
-    if ss as usize == 0 {
-        return 0 as *const char_t;
-    }
-    let len2 = strlen(s2) as isize;
-    let mut i = 0;
-    while i < len {
-        if memchr(s2, *ss.offset(i) as int_t, len2 as size_t) as usize != 0 {
-            break;
+static mut STRTOK_STR: Option<&mut [char_t]> = None;
+
+unsafe fn strtok_impl(s2: *const char_t) -> *const char_t {
+    if let Some(mut s1) = STRTOK_STR.take() {
+        let res = s1.as_ptr() as *mut _;
+        let end_index = strcspn(res, s2);
+        if end_index != s1.len() {
+            *res.add(end_index) = 0;
+            s1 = s1.get_unchecked_mut((end_index + 1)..);
+        } else {
+            s1 = from_raw_parts_mut(null_mut(), 0);
         }
-        i += 1;
-    }
-    ss = ss.offset(i);
-    len -= i;
-    if len == 0 {
-        ss = 0 as *mut char_t;
-        return 0 as *const char_t;
-    }
-    let mut i = 0;
-    while i < len {
-        if memchr(s2, *ss.offset(i) as int_t, len2 as size_t) as usize == 0 {
-            break;
+        if s1.is_empty() {
+            STRTOK_STR = None;
+        } else {
+            STRTOK_STR = Some(s1);
         }
-        i += 1;
+        res
+    } else {
+        null()
     }
-    if i == len {
-        len = 0;
-        let tmp = ss;
-        ss = 0 as *mut char_t;
-        return tmp as *const _;
-    }
-    *ss.offset(i) = 0;
-    let tmp = ss;
-    ss = ss.offset(i + 1);
-    len -= i + 1;
-    tmp as *const _
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn memset(dst: *mut char_t, c: int_t, n: size_t) -> *mut char_t {
-    for dst in MemMutIter::from_ptr(dst, LenBound { len: n }) {
-        *dst = c as i8;
+pub unsafe extern "C" fn strtok(s1: *mut char_t, s2: *const char_t) -> *const char_t {
+    if !s1.is_null() {
+        STRTOK_STR = Some(from_raw_parts_mut(s1 as *mut _, strlen(s1)));
     }
-    dst
+    loop {
+        let res = strtok_impl(s2);
+        if res.is_null() || *res != b'\0' as _ {
+            return res;
+        }
+    }
 }
 
 #[no_mangle]

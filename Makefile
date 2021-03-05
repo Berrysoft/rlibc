@@ -4,7 +4,7 @@ ARCH		   ?= x86_64
 TARGET		   ?= x86_64-unknown-linux-gnu
 
 BDIR			= target
-CONFIG			= debug
+CONFIG		   ?= debug
 TARGETDIR       = $(BDIR)/$(TARGET)/$(CONFIG)
 
 LD				= ld.lld
@@ -12,7 +12,12 @@ CLANG			= clang
 CARGO			= cargo
 
 # add -L $(TARGETDIR)/deps for non-native platforms
-CLANGFLAGS		= -target $(TARGET) -I include/rlibc -nostdlib -fno-stack-protector
+CLANGFLAGS		= -target $(TARGET) -I include/rlibc -nostdlib -fno-stack-protector -fno-builtin
+CARGOFLAGS		=
+
+ifeq ($(CONFIG), release)
+CARGOFLAGS	   += --release
+endif
 
 .PHONY: all directories run clean $(TARGETDIR)/libc.a
 
@@ -23,7 +28,7 @@ directories:
 	mkdir -p $(TARGETDIR)
 
 $(TARGETDIR)/libc.a:
-	$(CARGO) build --target=$(TARGET)
+	$(CARGO) build $(CARGOFLAGS) --target=$(TARGET)
 
 $(TARGETDIR)/crt0.o: crt/$(TARGET)/crt0.s
 	$(CLANG) $(CLANGFLAGS) -c $< -o $@

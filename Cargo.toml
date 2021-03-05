@@ -6,6 +6,7 @@ edition = "2018"
 readme = "README.md"
 
 [dependencies]
+compiler_builtins = {version = "0.1", features = ["mem"]}
 
 [lib]
 crate-type = ["staticlib"]
