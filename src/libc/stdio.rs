@@ -95,11 +95,12 @@ impl Write for StrBufferFile {
         unsafe {
             match self.len {
                 Some(len) => {
-                    if slen > len {
+                    if slen + 1 > len {
                         Err(core::fmt::Error)
                     } else {
                         copy_nonoverlapping(s.as_bytes().as_ptr(), self.data as _, slen);
                         self.data = self.data.add(slen);
+                        *self.data = 0;
                         self.len = Some(len - slen);
                         Ok(())
                     }
@@ -107,6 +108,7 @@ impl Write for StrBufferFile {
                 None => {
                     copy_nonoverlapping(s.as_bytes().as_ptr(), self.data as _, slen);
                     self.data = self.data.add(slen);
+                    *self.data = 0;
                     Ok(())
                 }
             }
@@ -180,8 +182,18 @@ pub unsafe extern "C" fn vfprintf(f: *mut FILE, fmt: *const char_t, vlist: VaLis
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn fprintf(f: *mut FILE, fmt: *const char_t, mut args: ...) -> int_t {
+    vfprintf(f, fmt, args.as_va_list())
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vsprintf(buf: *mut char_t, fmt: *const char_t, vlist: VaList) -> int_t {
     unwrap_result(vprintf_impl(&mut StrBufferFile::from_ptr(buf), fmt, vlist))
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn sprintf(buf: *mut char_t, fmt: *const char_t, mut args: ...) -> int_t {
+    vsprintf(buf, fmt, args.as_va_list())
 }
 
 #[no_mangle]
@@ -196,6 +208,16 @@ pub unsafe extern "C" fn vsnprintf(
     } else {
         vprintf_impl(&mut StrBufferFile::from_ptr_len(buf, n), fmt, vlist)
     })
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn snprintf(
+    buf: *mut char_t,
+    n: size_t,
+    fmt: *const char_t,
+    mut args: ...
+) -> int_t {
+    vsnprintf(buf, n, fmt, args.as_va_list())
 }
 
 #[derive(Debug, PartialEq, Eq)]

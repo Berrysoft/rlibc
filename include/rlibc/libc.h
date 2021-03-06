@@ -81,6 +81,9 @@ int fputc(int, FILE*);
 #define putc(c, f) (fputc((c), (f)))
 
 int printf(const char* fmt, ...);
+int fprintf(FILE*, const char* fmt, ...);
+int sprintf(char*, const char* fmt, ...);
+int snprintf(char*, size_t, const char* fmt, ...);
 
 int vprintf(const char* fmt, va_list);
 int vfprintf(FILE*, const char* fmt, va_list);

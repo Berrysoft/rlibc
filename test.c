@@ -228,9 +228,10 @@ void test_string()
 
 void test_alloc()
 {
-    char* buffer = malloc(4);
-    strcpy(buffer, "123");
-    puts(buffer);
+    int len = snprintf(NULL, 0, "%+5i\t%5i\t%.5i\t% .5i\t%+05i\t% 5i\n", 100, 100, 100, 100, 100, 100);
+    char* buffer = malloc(len);
+    sprintf(buffer, "%+5i\t%5i\t%.5i\t% .5i\t%+05i\t% 5i\n", 100, 100, 100, 100, 100, 100);
+    fputs(buffer, stdout);
     free(buffer);
 }
 
