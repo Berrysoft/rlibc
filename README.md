@@ -14,7 +14,7 @@ rlibc currently supports part of C99 and POSIX, as well as some OS-specific func
 
 * mem - mostly done
 * strings - done
-* math - done
+* math - mostly done
 * printing - partial
 * time - partial
 * fs - partial
