@@ -32,6 +32,11 @@ pub unsafe extern "C" fn __libc_start_main(argc: usize, argv: *const *const char
     exit(main(ARGC as int_t, ARGV, ENVP))
 }
 
+/// Prevent `__libc_start_main` from being optimized away when using lto.
+#[used]
+static LIBC_START_MAIN: Option<unsafe extern "C" fn(usize, *const *const char_t) -> !> =
+    Some(__libc_start_main);
+
 #[no_mangle]
 #[naked]
 pub unsafe extern "C" fn _start() -> ! {
