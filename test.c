@@ -229,7 +229,7 @@ void test_string()
 void test_alloc()
 {
     int len = snprintf(NULL, 0, "%+5i\t%5i\t%.5i\t% .5i\t%+05i\t% 5i\n", 100, 100, 100, 100, 100, 100);
-    char* buffer = malloc(len);
+    char* buffer = malloc(len + 1);
     sprintf(buffer, "%+5i\t%5i\t%.5i\t% .5i\t%+05i\t% 5i\n", 100, 100, 100, 100, 100, 100);
     fputs(buffer, stdout);
     free(buffer);

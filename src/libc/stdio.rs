@@ -9,6 +9,7 @@ use alloc::string::String;
 use core::ffi::VaList;
 use core::fmt::{Error, Write};
 use core::intrinsics::copy_nonoverlapping;
+use core::ptr::null_mut;
 use core::slice::from_raw_parts;
 use core::str::from_utf8_unchecked;
 use widestring::U32CStr;
@@ -91,35 +92,28 @@ impl StrBufferFile {
 
 impl Write for StrBufferFile {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
-        let slen = s.len();
-        unsafe {
-            match self.len {
-                Some(len) => {
-                    if slen + 1 > len {
-                        Err(core::fmt::Error)
-                    } else {
+        if !self.data.is_null() {
+            let slen = s.len();
+            unsafe {
+                match self.len {
+                    Some(len) => {
+                        if slen + 1 > len {
+                            self.data = null_mut()
+                        } else {
+                            copy_nonoverlapping(s.as_bytes().as_ptr(), self.data as _, slen);
+                            self.data = self.data.add(slen);
+                            *self.data = 0;
+                            self.len = Some(len - slen);
+                        }
+                    }
+                    None => {
                         copy_nonoverlapping(s.as_bytes().as_ptr(), self.data as _, slen);
                         self.data = self.data.add(slen);
                         *self.data = 0;
-                        self.len = Some(len - slen);
-                        Ok(())
                     }
-                }
-                None => {
-                    copy_nonoverlapping(s.as_bytes().as_ptr(), self.data as _, slen);
-                    self.data = self.data.add(slen);
-                    *self.data = 0;
-                    Ok(())
                 }
             }
         }
-    }
-}
-
-struct EmptyBufferFile;
-
-impl Write for EmptyBufferFile {
-    fn write_str(&mut self, _: &str) -> core::fmt::Result {
         Ok(())
     }
 }
@@ -203,11 +197,11 @@ pub unsafe extern "C" fn vsnprintf(
     fmt: *const char_t,
     vlist: VaList,
 ) -> int_t {
-    unwrap_result(if n == 0 {
-        vprintf_impl(&mut EmptyBufferFile, fmt, vlist)
-    } else {
-        vprintf_impl(&mut StrBufferFile::from_ptr_len(buf, n), fmt, vlist)
-    })
+    unwrap_result(vprintf_impl(
+        &mut StrBufferFile::from_ptr_len(buf, n),
+        fmt,
+        vlist,
+    ))
 }
 
 #[no_mangle]
