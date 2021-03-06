@@ -108,27 +108,67 @@ struct MallocHeader {
     size: usize,
 }
 
+impl MallocHeader {
+    pub unsafe fn wrap(ptr: *mut u8, size: usize) -> *mut Self {
+        let ptr: *mut Self = ptr.cast();
+        if let Some(h) = ptr.as_mut() {
+            h.size = size;
+            ptr.add(1)
+        } else {
+            null_mut()
+        }
+    }
+
+    pub unsafe fn unwrap(ptr: *mut Self) -> (*mut u8, usize) {
+        let ptr = ptr.sub(1);
+        let size = ptr.as_ref().unwrap_unchecked().size;
+        (ptr as _, size)
+    }
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn malloc(size: size_t) -> *mut void_t {
     let res = ALLOCATOR.alloc(Layout::from_size_align_unchecked(
         size + size_of::<MallocHeader>(),
         align_of::<MallocHeader>(),
-    )) as *mut MallocHeader;
-    if let Some(h) = res.as_mut() {
-        h.size = size;
-        res.add(1) as _
+    ));
+    MallocHeader::wrap(res, size) as _
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn calloc(num: size_t, size: size_t) -> *mut void_t {
+    let size = num * size;
+    let res = ALLOCATOR.alloc_zeroed(Layout::from_size_align_unchecked(
+        size + size_of::<MallocHeader>(),
+        align_of::<MallocHeader>(),
+    ));
+    MallocHeader::wrap(res, size) as _
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn realloc(ptr: *mut void_t, new_size: size_t) -> *mut void_t {
+    if ptr.is_null() {
+        malloc(new_size)
     } else {
-        null_mut()
+        let (ptr, size) = MallocHeader::unwrap(ptr as _);
+        let new_ptr = ALLOCATOR.realloc(
+            ptr,
+            Layout::from_size_align_unchecked(
+                size + size_of::<MallocHeader>(),
+                align_of::<MallocHeader>(),
+            ),
+            new_size,
+        );
+        MallocHeader::wrap(new_ptr, new_size) as _
     }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn free(ptr: *mut void_t) {
     if !ptr.is_null() {
-        let ptr = (ptr as *mut MallocHeader).sub(1);
-        let size = ptr.as_ref().unwrap_unchecked().size;
+        let (ptr, size) = MallocHeader::unwrap(ptr as _);
         ALLOCATOR.dealloc(
-            ptr as _,
+            ptr,
             Layout::from_size_align_unchecked(
                 size + size_of::<MallocHeader>(),
                 align_of::<MallocHeader>(),

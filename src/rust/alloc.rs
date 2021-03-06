@@ -47,9 +47,7 @@ unsafe impl GlobalAlloc for MapAlloc {
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        if !ptr.is_null() {
-            self.deallocate(NonNull::new_unchecked(ptr), layout);
-        }
+        self.deallocate(NonNull::new_unchecked(ptr), layout);
     }
 }
 

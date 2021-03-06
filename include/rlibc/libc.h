@@ -5,7 +5,10 @@
 
 #include <ctype.h>
 #include <inttypes.h>
+#include <stdarg.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 typedef int64_t off_t;
 typedef int32_t pid_t;
@@ -16,7 +19,6 @@ typedef long time_t;
 typedef uint32_t wchar_t;
 typedef uint32_t wint_t;
 typedef int errno_t;
-typedef void* va_list;
 
 #define NULL (0)
 
@@ -106,8 +108,6 @@ void* mmap(void* addr, size_t length, int prot, int flags, int fd, off_t offset)
 int munmap(void* addr, size_t length);
 int brk(void*);
 void* sbrk(intptr_t);
-void* malloc(size_t);
-void free(void*);
 
 /* Environment */
 errno_t* __p_errno(void);
