@@ -2,20 +2,11 @@
 /// #include "libc.h"
 
 #pragma once
-#pragma lib "libc.a"
 
-typedef signed char int8_t;
-typedef unsigned char uint8_t;
-typedef signed short int16_t;
-typedef unsigned short uint16_t;
-typedef signed int int32_t;
-typedef unsigned int uint32_t;
-typedef signed long int64_t;
-typedef unsigned long uint64_t;
-typedef int64_t intptr_t;
-typedef uint64_t uintptr_t;
-typedef uint64_t size_t;
-typedef int64_t ssize_t;
+#include <ctype.h>
+#include <inttypes.h>
+#include <stdint.h>
+
 typedef int64_t off_t;
 typedef int32_t pid_t;
 typedef uint32_t uid_t;
@@ -30,20 +21,6 @@ typedef void* va_list;
 #define NULL (0)
 
 /* Types */
-int isalnum(int);
-int isalpha(int);
-int isblank(int);
-int iscntrl(int);
-int isdigit(int);
-int isgraph(int);
-int islower(int);
-int isprint(int);
-int ispunct(int);
-int isspace(int);
-int isupper(int);
-int isxdigit(int);
-int tolower(int);
-int toupper(int);
 
 int iswalnum(wint_t);
 int iswalpha(wint_t);
@@ -59,26 +36,6 @@ int iswupper(wint_t);
 int iswxdigit(wint_t);
 wint_t towlower(wint_t);
 wint_t towupper(wint_t);
-
-/* Memory */
-void* memchr(const void*, int, size_t);
-int memcmp(const void*, const void*, size_t);
-void* memcpy(void*, const void*, size_t);
-void* memmove(void*, const void*, size_t);
-void* memset(void*, int, size_t);
-
-/* String manipulation */
-char* strchr(char* s, int c);
-char* strcpy(char* dst, const char* src);
-char* strncpy(char* dst, const char* src, size_t n);
-char* strcat(char* dst, const char* src);
-char* strncat(char* dst, const char* src, size_t n);
-int strcmp(const char* m1, const char* m2);
-int strncmp(const char* m1, const char* m2, size_t n);
-char* strtok(char* s1, const char* s2);
-char* strerror(int);
-size_t strnlen(const char*, size_t);
-size_t strlen(const char*);
 
 /* Filesystem */
 typedef struct FILE FILE;

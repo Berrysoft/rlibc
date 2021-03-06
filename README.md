@@ -13,7 +13,7 @@ To build, you'll need make, clang, lld and cargo.
 rlibc currently supports part of C99 and POSIX, as well as some OS-specific functions.
 
 * mem - mostly done
-* strings - mostly done
+* strings - done
 * math - done
 * printing - partial
 * time - partial
