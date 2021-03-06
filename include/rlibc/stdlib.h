@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#define NULL (0)
+
 // TODO: ato*
 // TODO: strto*
 
