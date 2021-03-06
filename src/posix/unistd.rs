@@ -100,3 +100,18 @@ pub unsafe extern "C" fn setgid(gid: gid_t) -> int_t {
 pub unsafe extern "C" fn setsid() -> pid_t {
     forward!(sys_setsid,) as pid_t
 }
+
+pub static mut AUXV: [usize; AUX_CNT] = [0; AUX_CNT];
+
+pub const AUX_CNT: usize = 38;
+pub const AT_PAGESZ: ulong_t = 6;
+
+#[no_mangle]
+pub unsafe extern "C" fn getauxval(t: ulong_t) -> ulong_t {
+    AUXV[t as usize] as _
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn getpagesize() -> int_t {
+    getauxval(AT_PAGESZ) as _
+}

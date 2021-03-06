@@ -1,5 +1,6 @@
 use crate::libc::string::{strchr, strlen};
-use crate::posix::stdlib::{exit, ARGC, ARGV, AUXV, AUX_CNT, ENV};
+use crate::posix::stdlib::{exit, ARGC, ARGV, ENV};
+use crate::posix::unistd::{AUXV, AUX_CNT};
 use crate::types::{char_t, int_t};
 use alloc::borrow::ToOwned;
 use alloc::string::ToString;

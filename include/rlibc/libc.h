@@ -4,21 +4,19 @@
 #pragma once
 
 #include <ctype.h>
+#include <errno.h>
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
+#include <sys/types.h>
 
-typedef int64_t off_t;
-typedef int32_t pid_t;
-typedef uint32_t uid_t;
-typedef uint32_t gid_t;
 typedef unsigned long clock_t;
 typedef long time_t;
 typedef uint32_t wchar_t;
 typedef uint32_t wint_t;
-typedef int errno_t;
 
 #define NULL (0)
 
@@ -96,23 +94,11 @@ int rmdir(const char*);
 int unlink(const char*);
 int utime(const char*, void*);
 
-/* Process Management */
-void exit(int);
-void _exit(int);
-void _Exit(int);
-void abort(void);
-int atexit(void (*)(void));
-
 /* Memory Management */
-void* mmap(void* addr, size_t length, int prot, int flags, int fd, off_t offset);
-int munmap(void* addr, size_t length);
 int brk(void*);
 void* sbrk(intptr_t);
 
 /* Environment */
-errno_t* __p_errno(void);
-#define errno (*__p_errno())
-char* getenv(const char*);
 pid_t getpid(void);
 uid_t getuid(void);
 uid_t geteuid(void);
