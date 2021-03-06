@@ -30,13 +30,10 @@ directories:
 $(TARGETDIR)/libc.a:
 	$(CARGO) build $(CARGOFLAGS) --target=$(TARGET)
 
-$(TARGETDIR)/crt0.o: crt/$(TARGET)/crt0.s
-	$(CLANG) $(CLANGFLAGS) -c $< -o $@
-
 $(TARGETDIR)/test.o: test.c include/rlibc/libc.h
 	$(CLANG) $(CLANGFLAGS) -c $< -o $@
 
-$(TARGETDIR)/test: $(TARGETDIR)/crt0.o $(TARGETDIR)/test.o $(TARGETDIR)/libc.a
+$(TARGETDIR)/test: $(TARGETDIR)/test.o $(TARGETDIR)/libc.a
 	$(LD) $^ -o $@
 
 run: all

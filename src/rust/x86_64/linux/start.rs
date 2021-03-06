@@ -5,7 +5,7 @@ extern "C" {
     fn main(argc: int_t, argv: *const *const char_t, envp: *const *const char_t) -> int_t;
 }
 
-/// This function is called by start().
+/// This function is called by _start().
 /// It stores the addresses of the stack arguments, invokes main(), and passes
 /// the return status to exit().
 #[no_mangle]
@@ -30,4 +30,18 @@ pub unsafe extern "C" fn __libc_start_main(argc: usize, argv: *const *const char
     }
 
     exit(main(ARGC as int_t, ARGV, ENVP))
+}
+
+#[no_mangle]
+#[naked]
+pub unsafe extern "C" fn _start() -> ! {
+    asm!(
+        "xor rbp,rbp
+        pop rdi
+        mov rsi,rsp
+        and rsp,-16
+        call __libc_start_main
+        hlt",
+        options(noreturn)
+    );
 }

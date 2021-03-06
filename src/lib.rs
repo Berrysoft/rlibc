@@ -2,12 +2,14 @@
 #![allow(non_snake_case)]
 #![feature(
     allocator_api,
+    asm,
     compiler_builtins,
     core_intrinsics,
     c_variadic,
     default_alloc_error_handler,
     lang_items,
     llvm_asm,
+    naked_functions,
     option_result_unwrap_unchecked,
     panic_info_message,
     rustc_private
