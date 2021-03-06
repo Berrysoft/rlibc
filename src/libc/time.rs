@@ -29,6 +29,7 @@ pub unsafe extern "C" fn gettimeofday(tv: *mut timeval, tz: *mut timezone) -> in
     forward!(sys_gettimeofday, tv, tz) as _
 }
 
+#[thread_local]
 pub static mut GMTIME_TM: tm = tm {
     tm_sec: 0,
     tm_min: 0,
@@ -156,10 +157,13 @@ pub unsafe extern "C" fn mktime(timer_ptr: *const tm) -> time_t {
 }
 
 #[no_mangle]
+#[thread_local]
 pub static mut tzname: [*mut char_t; 2] = [0 as *mut char_t, 0 as *mut char_t];
 #[no_mangle]
+#[thread_local]
 pub static mut timezone: long_t = 0;
 #[no_mangle]
+#[thread_local]
 pub static mut daylight: int_t = 0;
 
 /// TODO time localization

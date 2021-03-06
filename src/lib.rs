@@ -12,7 +12,8 @@
     naked_functions,
     option_result_unwrap_unchecked,
     panic_info_message,
-    rustc_private
+    rustc_private,
+    thread_local
 )]
 #![no_std]
 

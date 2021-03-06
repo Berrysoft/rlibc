@@ -328,6 +328,7 @@ pub unsafe extern "C" fn strstr(s1: *const char_t, s2: *const char_t) -> *const 
     null()
 }
 
+#[thread_local]
 static mut STRTOK_STR: Option<&mut [char_t]> = None;
 
 unsafe fn strtok_impl(s2: *const char_t) -> *const char_t {
