@@ -25,10 +25,9 @@ extern crate core;
 #[macro_use]
 mod rust;
 
-mod consts;
+pub mod consts;
 mod types;
 
-#[macro_use]
 pub mod libc;
 pub mod math;
 pub mod posix;

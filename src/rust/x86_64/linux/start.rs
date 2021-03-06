@@ -5,7 +5,7 @@ use alloc::borrow::ToOwned;
 use alloc::string::ToString;
 use core::slice::from_raw_parts;
 use core::str::from_utf8_unchecked;
-use cstrptr::{CStr, CString};
+use cstrptr::CStr;
 
 extern "C" {
     fn main(argc: int_t, argv: *const *const char_t, envp: *const *const char_t) -> int_t;
