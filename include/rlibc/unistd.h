@@ -10,3 +10,13 @@ off_t lseek(int, off_t, int);
 
 int rmdir(const char*);
 int unlink(const char*);
+
+int brk(void*);
+void* sbrk(intptr_t);
+
+pid_t getpid(void);
+uid_t getuid(void);
+uid_t geteuid(void);
+pid_t setsid(void);
+int setgid(gid_t);
+int setuid(uid_t);
