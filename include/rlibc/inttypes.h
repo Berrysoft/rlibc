@@ -6,3 +6,5 @@
 // TODO: missing SCN_* definitions
 
 // TODO: missing strto*max
+
+// TODO: imax*

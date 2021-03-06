@@ -6,6 +6,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <inttypes.h>
+#include <math.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -105,77 +106,6 @@ uid_t geteuid(void);
 pid_t setsid(void);
 int setgid(gid_t);
 int setuid(uid_t);
-
-/* Math */
-float ldexpf(float x, int exp);
-float floorf(float x);
-float ceilf(float x);
-float truncf(float x);
-float roundf(float x);
-float fmaf(float x, float y, float z);
-float fmodf(float x, float y);
-float fdimf(float x, float y);
-float fmaxf(float x, float y);
-float fminf(float x, float y);
-float logf(float x);
-float log2f(float x);
-float log10f(float x);
-float log1pf(float x);
-float sqrtf(float x);
-float cbrtf(float x);
-float expf(float x);
-float exp2f(float x);
-float expm1f(float x);
-float powf(float mant, float expo);
-float sinf(float x);
-float cosf(float x);
-float tanf(float x);
-float asinf(float x);
-float acosf(float x);
-float atanf(float x);
-float acoshf(float x);
-float asinhf(float x);
-float atanhf(float x);
-float coshf(float x);
-float sinhf(float x);
-float tanhf(float x);
-
-double ldexp(double x, int exp);
-double floor(double x);
-double ceil(double x);
-double trunc(double x);
-double round(double x);
-double fma(double x, double y, double z);
-double fmod(double x, double y);
-double fdim(double x, double y);
-double fmax(double x, double y);
-double fmin(double x, double y);
-double log(double x);
-double log2(double x);
-double log10(double x);
-double log1p(double x);
-double sqrt(double x);
-double cbrt(double x);
-double exp(double x);
-double exp2(double x);
-double expm1(double x);
-double pow(double mant, double expo);
-double sin(double x);
-double cos(double x);
-double tan(double x);
-double asin(double x);
-double acos(double x);
-double atan(double x);
-double acosh(double x);
-double asinh(double x);
-double atanh(double x);
-double cosh(double x);
-double sinh(double x);
-double tanh(double x);
-
-double gauss(double x);
-double erf(double x);
-double erfc(double x);
 
 /* Time */
 struct tm

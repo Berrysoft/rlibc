@@ -28,3 +28,5 @@ int mkstemp(char* template);
 // TODO: rand
 // TODO: qsort
 // TODO: bsearch
+// TODO: abs
+// TODO: div
