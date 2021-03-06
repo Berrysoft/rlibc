@@ -5,6 +5,7 @@ use crate::posix::unistd::{rmdir, unlink};
 use crate::syscalls::{sys_rename, sys_write};
 use crate::types::*;
 use alloc::format;
+use alloc::string::String;
 use core::ffi::VaList;
 use core::fmt::{Error, Write};
 use core::intrinsics::copy_nonoverlapping;
@@ -198,7 +199,7 @@ pub unsafe extern "C" fn vsnprintf(
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum FormatSpec {
+enum FormatLength {
     /// None
     None,
     /// %l
@@ -217,6 +218,317 @@ enum FormatSpec {
     Diff,
     /// %L
     LongDouble,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum FormatType {
+    None,
+    Percent,
+    Char,
+    String,
+    SignedInt,
+    UnsignedInt,
+    UnsignedOct,
+    UnsignedHex(bool),
+    FixedFloat,
+    ExponentFloat(bool),
+    ExponentHexFloat(bool),
+    GeneralFloat(bool),
+    CurrentLen,
+    Pointer,
+}
+
+#[derive(Debug)]
+enum FormatUSize {
+    None,
+    Some(usize),
+    ReadNext,
+}
+
+impl FormatUSize {
+    pub fn read_next(&self, vlist: &mut VaList) -> Option<usize> {
+        match self {
+            Self::None => None,
+            Self::Some(v) => Some(*v),
+            Self::ReadNext => {
+                let v: int_t = unsafe { vlist.arg() };
+                Some(v as usize)
+            }
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum FormatPadding {
+    None,
+    Space,
+    Zero,
+}
+
+#[derive(Debug)]
+struct FormatSpec {
+    left_align: bool,
+    alter: bool,
+    positive: bool,
+    pad_ty: FormatPadding,
+    pad: FormatUSize,
+    prc: FormatUSize,
+    length: FormatLength,
+    ty: FormatType,
+}
+
+impl Default for FormatSpec {
+    fn default() -> Self {
+        Self {
+            left_align: false,
+            alter: false,
+            positive: false,
+            pad_ty: FormatPadding::None,
+            pad: FormatUSize::None,
+            prc: FormatUSize::None,
+            length: FormatLength::None,
+            ty: FormatType::None,
+        }
+    }
+}
+
+impl FormatSpec {
+    pub unsafe fn parse(mut index: *const i8) -> (*const i8, Self) {
+        let mut res = Self::default();
+        loop {
+            match *index as u8 {
+                b'-' => res.left_align = true,
+                b'+' => res.positive = true,
+                b' ' => res.pad_ty = FormatPadding::Space,
+                b'#' => res.alter = true,
+                b'0' => res.pad_ty = FormatPadding::Zero,
+                _ => break,
+            }
+            index = index.add(1);
+        }
+        match *index as u8 {
+            b'*' | b'1'..=b'9' => {
+                let (i, p) = Self::read_usize(index);
+                index = i;
+                res.pad = p;
+            }
+            _ => {}
+        }
+        if *index as u8 == b'.' {
+            index = index.add(1);
+            match *index as u8 {
+                b'*' | b'0'..=b'9' => {
+                    let (i, p) = Self::read_usize(index);
+                    index = i;
+                    res.prc = p;
+                }
+                _ => res.prc = FormatUSize::Some(0),
+            }
+        }
+        let (spec, off) = match *index as u8 {
+            b'l' => {
+                if *index.add(1) as u8 == b'l' {
+                    (FormatLength::LongLong, 2)
+                } else {
+                    (FormatLength::Long, 1)
+                }
+            }
+            b'h' => {
+                if *index.add(1) as u8 == b'h' {
+                    (FormatLength::ShortShort, 2)
+                } else {
+                    (FormatLength::Short, 1)
+                }
+            }
+            b'j' => (FormatLength::Max, 1),
+            b'z' => (FormatLength::Size, 1),
+            b't' => (FormatLength::Diff, 1),
+            b'L' => (FormatLength::LongDouble, 1),
+            _ => (FormatLength::None, 0),
+        };
+        index = index.add(off);
+        res.length = spec;
+        res.ty = match *index as u8 {
+            b'%' => FormatType::Percent,
+            b'c' => FormatType::Char,
+            b's' => FormatType::String,
+            b'd' | b'i' => FormatType::SignedInt,
+            b'o' => FormatType::UnsignedOct,
+            b'x' => FormatType::UnsignedHex(false),
+            b'X' => FormatType::UnsignedHex(true),
+            b'u' => FormatType::UnsignedInt,
+            b'f' | b'F' => FormatType::FixedFloat,
+            b'e' => FormatType::ExponentFloat(false),
+            b'E' => FormatType::ExponentFloat(true),
+            b'a' => FormatType::ExponentHexFloat(false),
+            b'A' => FormatType::ExponentHexFloat(true),
+            b'g' => FormatType::GeneralFloat(false),
+            b'G' => FormatType::GeneralFloat(true),
+            b'n' => FormatType::CurrentLen,
+            b'p' => FormatType::Pointer,
+            _ => FormatType::None,
+        };
+        index = index.add(1);
+        (index, res)
+    }
+
+    unsafe fn read_usize(mut index: *const i8) -> (*const i8, FormatUSize) {
+        if *index as u8 == b'*' {
+            index = index.add(1);
+            return (index, FormatUSize::ReadNext);
+        }
+        let mut off = 0;
+        let mut pad: usize = 0;
+        while (*index.add(off) as u8 as char).is_ascii_digit() {
+            pad *= 10;
+            pad += (*index.add(off) as u8 - b'0') as usize;
+            off += 1;
+        }
+        if off == 0 {
+            (index, FormatUSize::None)
+        } else {
+            index = index.add(off);
+            (index, FormatUSize::Some(pad))
+        }
+    }
+
+    fn read_pad_prc(&self, vlist: &mut VaList) -> (Option<usize>, Option<usize>) {
+        (self.pad.read_next(vlist), self.prc.read_next(vlist))
+    }
+
+    fn fmt_signed_int(&self, vlist: &mut VaList) -> Result<String> {
+        let value: i128 = unsafe {
+            match self.length {
+                FormatLength::None => vlist.arg::<int_t>() as _,
+                FormatLength::Short => vlist.arg::<short_t>() as _,
+                FormatLength::ShortShort => vlist.arg::<char_t>() as _,
+                FormatLength::Long => vlist.arg::<long_t>() as _,
+                FormatLength::LongLong => vlist.arg::<longlong_t>() as _,
+                FormatLength::Max => vlist.arg::<intmax_t>() as _,
+                FormatLength::Size => vlist.arg::<isize>() as _,
+                FormatLength::Diff => vlist.arg::<ptrdiff_t>() as _,
+                FormatLength::LongDouble => {
+                    return Err(Error);
+                }
+            }
+        };
+        let (pad, prc) = self.read_pad_prc(vlist);
+        let s = if self.positive {
+            if self.left_align {
+                match pad {
+                    Some(pad) => match prc {
+                        Some(prc) => {
+                            format!("{:<1$}", format!("{:+01$}", value, prc), pad)
+                        }
+                        None => format!("{:+<1$}", value, pad),
+                    },
+                    None => return Err(Error),
+                }
+            } else {
+                match pad {
+                    Some(pad) => match self.pad_ty {
+                        FormatPadding::None | FormatPadding::Space => {
+                            format!(
+                                "{:>1$}",
+                                match prc {
+                                    Some(prc) => format!("{:+>1$}", value, prc + 1),
+                                    None => format!("{:+}", value),
+                                },
+                                pad
+                            )
+                        }
+                        FormatPadding::Zero => {
+                            format!("{:+01$}", value, pad.max(prc.unwrap_or_default() + 1))
+                        }
+                    },
+                    None => match self.pad_ty {
+                        FormatPadding::None => match prc {
+                            Some(prc) => format!("{:+>1$}", value, prc + 1),
+                            None => format!("{:+}", value),
+                        },
+                        _ => return Err(Error),
+                    },
+                }
+            }
+        } else {
+            if self.left_align {
+                match pad {
+                    Some(pad) => match self.pad_ty {
+                        FormatPadding::None | FormatPadding::Zero => match prc {
+                            Some(prc) => {
+                                format!("{:<1$}", format!("{:01$}", value, prc), pad)
+                            }
+                            None => format!("{:<1$}", value, pad),
+                        },
+                        FormatPadding::Space => match prc {
+                            Some(prc) => format!(
+                                "{:<1$}",
+                                if value >= 0 {
+                                    format!("{:01$}", value, prc)
+                                } else {
+                                    format!("{:01$}", value, prc + 1)
+                                },
+                                pad
+                            ),
+                            None => {
+                                if value >= 0 {
+                                    format!(" {:<1$}", value, pad - 1)
+                                } else {
+                                    format!("{:<1$}", value, pad)
+                                }
+                            }
+                        },
+                    },
+                    None => return Err(Error),
+                }
+            } else {
+                match pad {
+                    Some(pad) => match self.pad_ty {
+                        FormatPadding::None | FormatPadding::Space => match prc {
+                            Some(prc) => {
+                                format!("{:>1$}", format!("{:01$}", value, prc), pad)
+                            }
+                            None => format!("{:>1$}", value, pad),
+                        },
+                        FormatPadding::Zero => match prc {
+                            Some(prc) if prc > pad => {
+                                if value >= 0 {
+                                    format!("{:01$}", value, prc)
+                                } else {
+                                    format!("{:01$}", value, prc + 1)
+                                }
+                            }
+                            _ => {
+                                if value >= 0 {
+                                    format!("{:01$}", value, pad)
+                                } else {
+                                    format!("{:01$}", value, pad)
+                                }
+                            }
+                        },
+                    },
+                    None => match prc {
+                        Some(prc) => {
+                            if value >= 0 {
+                                match self.pad_ty {
+                                    FormatPadding::Space => {
+                                        format!(" {:01$}", value, prc)
+                                    }
+                                    _ => {
+                                        format!("{:01$}", value, prc)
+                                    }
+                                }
+                            } else {
+                                format!("{:01$}", value, prc + 1)
+                            }
+                        }
+                        None => format!("{}", value),
+                    },
+                }
+            }
+        };
+        Ok(s)
+    }
 }
 
 unsafe fn vprintf_impl(
@@ -239,66 +551,11 @@ unsafe fn vprintf_impl(
                 buf.write_str(from_utf8_unchecked(from_raw_parts(current as _, len as _)))?;
             }
             index = index.add(1);
-            let (pad, off) = {
-                let mut off = 0;
-                let mut pad: usize = 0;
-                while (*index.add(off) as u8 as char).is_ascii_digit() {
-                    pad *= 10;
-                    pad += (*index.add(off) as u8 - b'0') as usize;
-                    off += 1;
-                }
-                if off == 0 {
-                    (None, off)
-                } else {
-                    (Some(pad), off)
-                }
-            };
-            index = index.add(off);
-            let (prc, off) = if *index as u8 == b'.' {
-                index = index.add(1);
-                let mut off = 0;
-                let mut prc: usize = 0;
-                while (*index.add(off) as u8 as char).is_ascii_digit() {
-                    prc *= 10;
-                    prc += (*index.add(off) as u8 - b'0') as usize;
-                    off += 1;
-                }
-                if off == 0 {
-                    (None, Some(off))
-                } else {
-                    (Some(prc), Some(off))
-                }
-            } else {
-                (None, None)
-            };
-            if let Some(off) = off {
-                index = index.add(off);
-            }
-            let (spec, off) = match *index as u8 {
-                b'l' => {
-                    if *index.add(1) as u8 == b'l' {
-                        (FormatSpec::LongLong, 2)
-                    } else {
-                        (FormatSpec::Long, 1)
-                    }
-                }
-                b'h' => {
-                    if *index.add(1) as u8 == b'h' {
-                        (FormatSpec::ShortShort, 2)
-                    } else {
-                        (FormatSpec::Short, 1)
-                    }
-                }
-                b'j' => (FormatSpec::Max, 1),
-                b'z' => (FormatSpec::Size, 1),
-                b't' => (FormatSpec::Diff, 1),
-                b'L' => (FormatSpec::LongDouble, 1),
-                _ => (FormatSpec::None, 0),
-            };
-            index = index.add(off);
-            let len = match *index as u8 {
-                b'%' => match spec {
-                    FormatSpec::None => {
+            let (i, spec) = FormatSpec::parse(index);
+            index = i;
+            let len = match spec.ty {
+                FormatType::Percent => match spec.length {
+                    FormatLength::None => {
                         buf.write_char('%')?;
                         1
                     }
@@ -306,13 +563,13 @@ unsafe fn vprintf_impl(
                         return Err(Error);
                     }
                 },
-                b'c' => match spec {
-                    FormatSpec::None => {
+                FormatType::Char => match spec.length {
+                    FormatLength::None => {
                         let c: int_t = vlist.arg();
                         buf.write_char(c as u8 as char)?;
                         1
                     }
-                    FormatSpec::Long => {
+                    FormatLength::Long => {
                         let c: wint_t = vlist.arg();
                         let c = core::char::from_u32_unchecked(c);
                         buf.write_char(c)?;
@@ -322,14 +579,14 @@ unsafe fn vprintf_impl(
                         return Err(Error);
                     }
                 },
-                b's' => match spec {
-                    FormatSpec::None => {
+                FormatType::String => match spec.length {
+                    FormatLength::None => {
                         let s: *mut char_t = vlist.arg();
                         let len = strlen(s);
                         buf.write_str(from_utf8_unchecked(from_raw_parts(s as _, len)))?;
                         len
                     }
-                    FormatSpec::Long => {
+                    FormatLength::Long => {
                         let s: *mut wchar_t = vlist.arg();
                         let s = U32CStr::from_ptr_str(s);
                         let s = s.to_string_lossy();
@@ -340,30 +597,8 @@ unsafe fn vprintf_impl(
                         return Err(Error);
                     }
                 },
-                b'd' | b'i' => {
-                    let value: i128 = match spec {
-                        FormatSpec::None => vlist.arg::<int_t>() as _,
-                        FormatSpec::Short => vlist.arg::<short_t>() as _,
-                        FormatSpec::ShortShort => vlist.arg::<char_t>() as _,
-                        FormatSpec::Long => vlist.arg::<long_t>() as _,
-                        FormatSpec::LongLong => vlist.arg::<longlong_t>() as _,
-                        FormatSpec::Max => vlist.arg::<intmax_t>() as _,
-                        FormatSpec::Size => vlist.arg::<isize>() as _,
-                        FormatSpec::Diff => vlist.arg::<ptrdiff_t>() as _,
-                        FormatSpec::LongDouble => {
-                            return Err(Error);
-                        }
-                    };
-                    let s = if let Some(prc) = prc {
-                        format!("{:01$}", value, prc)
-                    } else {
-                        format!("{}", value)
-                    };
-                    let s = if let Some(pad) = pad {
-                        format!("{:>1$}", s, pad)
-                    } else {
-                        s
-                    };
+                FormatType::SignedInt => {
+                    let s = spec.fmt_signed_int(&mut vlist)?;
                     buf.write_str(&s)?;
                     s.len()
                 }
@@ -371,7 +606,7 @@ unsafe fn vprintf_impl(
                     return Err(Error);
                 }
             };
-            current = index.add(1);
+            current = index;
             res += len;
         }
     }

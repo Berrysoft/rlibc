@@ -222,6 +222,8 @@ void test_string()
     }
     printf("abc%c%lc%%%s\n", '%', L'💯', "abc💯");
     printf("%lc ==%4.3d\n", L'💯', 100);
+    printf("%+5i\t%5i\t%.5i\t% .5i\t%+05i\t% 5i\n", 100, 100, 100, 100, 100, 100);
+    printf("%+5i\t%5i\t%.5i\t% .5i\t%+05i\t% 5i\n", -100, -100, -100, -100, -100, -100);
 }
 
 void test_alloc()
