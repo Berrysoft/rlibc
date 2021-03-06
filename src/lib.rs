@@ -4,6 +4,7 @@
     allocator_api,
     asm,
     compiler_builtins,
+    const_btree_new,
     core_intrinsics,
     c_variadic,
     default_alloc_error_handler,

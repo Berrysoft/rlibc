@@ -1,22 +1,25 @@
 use crate::consts::errno::{EEXIST, EINVAL};
 use crate::consts::fcntl::{O_CREAT, O_EXCL};
 use crate::libc::errno::errno;
-use crate::libc::string::{strlen, strncmp, strnlen};
+use crate::libc::string::{strlen, strnlen};
 use crate::posix::fcntl::open;
 pub use crate::posix::pm::{_Exit, _exit, abort, atexit, exit};
 use crate::rust::alloc::ALLOCATOR;
 use crate::rust::rand::{os_rand, Rand};
 use crate::types::{char_t, int_t, size_t, ulong_t, void_t};
 use alloc::alloc::{GlobalAlloc, Layout};
+use alloc::borrow::ToOwned;
+use alloc::collections::BTreeMap;
+use alloc::string::{String, ToString};
 use core::mem::{align_of, size_of, MaybeUninit};
 use core::ptr::{null, null_mut};
 use core::slice::{from_raw_parts, from_raw_parts_mut};
-use core::str::from_utf8_unchecked_mut;
+use core::str::{from_utf8_unchecked, from_utf8_unchecked_mut};
+use cstrptr::{CStr, CString};
 
 pub static mut ARGV: *const *const char_t = null();
 pub static mut ARGC: usize = 0;
-pub static mut ENVP: *const *const char_t = null();
-pub static mut ENVC: usize = 0;
+pub static mut ENV: BTreeMap<String, CString> = BTreeMap::new();
 pub static mut AUXV: [usize; AUX_CNT] = [0; AUX_CNT];
 
 pub const AUX_CNT: usize = 38;
@@ -24,33 +27,38 @@ pub const AT_PAGESZ: ulong_t = 6;
 
 const K_ENV_MAXKEYLEN: size_t = 512;
 
-pub unsafe fn get_argv() -> &'static [*const char_t] {
-    from_raw_parts(ARGV, ARGC)
-}
-
-pub unsafe fn get_envp() -> &'static [*const char_t] {
-    from_raw_parts(ENVP, ENVC)
-}
-
 #[no_mangle]
 pub unsafe extern "C" fn getenv(key: *const char_t) -> *const char_t {
     let len = strnlen(key, K_ENV_MAXKEYLEN);
-    for &env in get_envp().iter() {
-        if strncmp(key, env, len) == 0 && *env.add(len) == b'=' as _ {
-            return env.add(len + 1);
-        }
+    match ENV.get(from_utf8_unchecked(from_raw_parts(key as _, len))) {
+        Some(value) => value.as_c_str().as_ptr(),
+        None => null(),
     }
-    null()
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn setenv(key: *const char_t, val: *const char_t, overwrite: int_t) -> int_t {
-    unimplemented!(); // TODO implement mutable environment
+    let len = strnlen(key, K_ENV_MAXKEYLEN);
+    let key = from_utf8_unchecked(from_raw_parts(key as _, len));
+    match ENV.get_mut(key) {
+        Some(value) => {
+            if overwrite != 0 {
+                *value = CStr::from_ptr(val).to_owned();
+            }
+        }
+        None => {
+            ENV.insert(key.to_string(), CStr::from_ptr(val).to_owned());
+        }
+    }
+    0
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn unsetenv(key: *const char_t) -> int_t {
-    unimplemented!(); // TODO implement mutable environment
+    let len = strnlen(key, K_ENV_MAXKEYLEN);
+    let key = from_utf8_unchecked(from_raw_parts(key as _, len));
+    ENV.remove(key);
+    0
 }
 
 #[no_mangle]
