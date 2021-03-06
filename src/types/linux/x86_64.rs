@@ -11,6 +11,8 @@ pub type longlong_t = i64;
 pub type ulong_t = u64;
 pub type ulonglong_t = i64;
 
+pub type errno_t = int_t;
+
 // stddef
 pub type ssize_t = isize;
 pub type size_t = usize;

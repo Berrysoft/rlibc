@@ -12,7 +12,6 @@ To build, you'll need make, clang, lld and cargo.
 # Coverage
 rlibc currently supports part of C99 and POSIX, as well as some OS-specific functions.
 
-* crt0 - mostly done
 * mem - mostly done
 * strings - mostly done
 * math - done
@@ -24,7 +23,7 @@ rlibc currently supports part of C99 and POSIX, as well as some OS-specific func
 * dl - none and WON'T
 * signals - almost none
 * pthreads - NONE
-* thread-local - NONE
+* thread-local - partial
 * net - NONE
 * atomics - NONE
 

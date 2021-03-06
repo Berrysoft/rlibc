@@ -22,11 +22,12 @@ typedef uint32_t uid_t;
 typedef uint32_t gid_t;
 typedef unsigned long clock_t;
 typedef long time_t;
+typedef uint32_t wchar_t;
+typedef uint32_t wint_t;
+typedef int errno_t;
 typedef void* va_list;
 
-#define nelem(x) (sizeof(x) / sizeof((x)[0]))
-#define offsetof(s, m) (size_t)(&(((s*)0)->m))
-#define NULL 0
+#define NULL (0)
 
 /* Types */
 int isalnum(int);
@@ -44,6 +45,21 @@ int isxdigit(int);
 int tolower(int);
 int toupper(int);
 
+int iswalnum(wint_t);
+int iswalpha(wint_t);
+int iswblank(wint_t);
+int iswcntrl(wint_t);
+int iswdigit(wint_t);
+int iswgraph(wint_t);
+int iswlower(wint_t);
+int iswprint(wint_t);
+int iswpunct(wint_t);
+int iswspace(wint_t);
+int iswupper(wint_t);
+int iswxdigit(wint_t);
+wint_t towlower(wint_t);
+wint_t towupper(wint_t);
+
 /* Memory */
 void* memchr(const void*, int, size_t);
 int memcmp(const void*, const void*, size_t);
@@ -52,6 +68,7 @@ void* memmove(void*, const void*, size_t);
 void* memset(void*, int, size_t);
 
 /* String manipulation */
+char* strchr(char* s, int c);
 char* strcpy(char* dst, const char* src);
 char* strncpy(char* dst, const char* src, size_t n);
 char* strcat(char* dst, const char* src);
@@ -70,9 +87,9 @@ extern FILE __stdin;
 extern FILE __stdout;
 extern FILE __stderr;
 
-#define stdin &__stdin
-#define stdout &__stdout
-#define stderr &__stderr
+#define stdin (&__stdin)
+#define stdout (&__stdout)
+#define stderr (&__stderr)
 
 /* I/O */
 int puts(const char*);
@@ -90,23 +107,23 @@ int vfprintf(FILE*, const char* fmt, va_list);
 int vsprintf(char*, const char* fmt, va_list);
 int vsnprintf(char*, size_t, const char* fmt, va_list);
 
-#define _IOFBF 0
-#define _IOLBF 1
-#define _IONBF 2
+#define _IOFBF (0)
+#define _IOLBF (1)
+#define _IONBF (2)
 
-#define BUFSIZ 8192
+#define BUFSIZ (8192)
 
 #define EOF (-1)
 
-#define FOPEN_MAX 16
-#define FILENAME_MAX 4096
-#define L_tmpnam 20
+#define FOPEN_MAX (16)
+#define FILENAME_MAX (4096)
+#define L_tmpnam (20)
 
-#define SEEK_SET 0
-#define SEEK_CUR 1
-#define SEEK_END 2
+#define SEEK_SET (0)
+#define SEEK_CUR (1)
+#define SEEK_END (2)
 
-#define TMP_MAX 238328
+#define TMP_MAX (238328)
 
 int close(int);
 ssize_t read(int, void*, size_t);
@@ -123,6 +140,7 @@ int utime(const char*, void*);
 /* Process Management */
 void exit(int);
 void _exit(int);
+void _Exit(int);
 void abort(void);
 int atexit(void (*)(void));
 
@@ -135,7 +153,8 @@ void* malloc(size_t);
 void free(void*);
 
 /* Environment */
-extern int errno;
+errno_t* __p_errno(void);
+#define errno (*__p_errno())
 char* getenv(const char*);
 pid_t getpid(void);
 uid_t getuid(void);
@@ -232,10 +251,11 @@ struct tm
 };
 time_t time(time_t*);
 struct tm* gmtime(const time_t*);
-struct tm* gmtime_r(const time_t*);
+struct tm* gmtime_r(const time_t*, struct tm*);
 struct tm* localtime(const time_t*);
-struct tm* localtime_r(const time_t*);
-time_t timegm(struct tm* const);
+struct tm* localtime_r(const time_t*, struct tm*);
+time_t timegm(struct tm*);
+time_t timelocal(struct tm*);
 time_t mktime(struct tm*);
 
 /* Dynamic loading */
