@@ -239,7 +239,7 @@ void test_input()
 {
     puts("Please enter your name:");
     char name[256];
-    gets(name);
+    fgets(name, sizeof(name), stdin);
     printf("Hello, %s!\n", name);
     fflush(stdin);
     fputs("Press any key to continue...", stdout);

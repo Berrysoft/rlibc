@@ -188,7 +188,7 @@ impl Write for FILE {
     }
 }
 
-impl core2::io::Read for FILE {
+impl Read for FILE {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
         unsafe {
             if self.buffer_rlen > 0 {
@@ -202,7 +202,7 @@ impl core2::io::Read for FILE {
     }
 }
 
-impl core2::io::BufRead for FILE {
+impl BufRead for FILE {
     fn fill_buf(&mut self) -> Result<&[u8]> {
         unsafe {
             if self.capacity() - self.buffer_rlen == 0 {
@@ -316,8 +316,8 @@ impl StrBuffer {
     }
 }
 
-impl core2::io::Write for StrBuffer {
-    fn write(&mut self, s: &[u8]) -> core2::io::Result<usize> {
+impl Write for StrBuffer {
+    fn write(&mut self, s: &[u8]) -> Result<usize> {
         if !self.data.is_null() {
             let slen = s.len();
             unsafe {
