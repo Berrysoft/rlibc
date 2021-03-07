@@ -235,12 +235,21 @@ void test_alloc()
     free(buffer);
 }
 
+void test_input()
+{
+    puts("Please enter your name:");
+    char name[256];
+    gets(name);
+    printf("Hello, %s!\n", name);
+}
+
 void test_all()
 {
     test_ctypes();
     test_math();
     test_string();
     test_alloc();
+    test_input();
 }
 
 int main(int argc, char const* argv[])

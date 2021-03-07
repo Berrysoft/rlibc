@@ -1,12 +1,12 @@
 use crate::consts::errno::{EINTR, EISDIR};
 use crate::libc::errno::errno;
-use crate::libc::string::strlen;
+use crate::libc::string::{memchr, strlen};
 use crate::posix::unistd::{read, rmdir, unlink, write};
 use crate::syscalls::sys_rename;
 use crate::types::*;
-use core::intrinsics::copy_nonoverlapping;
+use core::intrinsics::{copy, copy_nonoverlapping};
 use core::ptr::null_mut;
-use core::slice::from_raw_parts;
+use core::slice::{from_raw_parts, from_raw_parts_mut};
 use core2::io::*;
 
 const _IOFBF: int_t = 0;
@@ -71,7 +71,7 @@ impl FILE {
             fd,
             buffer: FileBuffer::Internal([0; BUFSIZ]),
             buffer_len: 0,
-            buffer_ty: FileBufferType::Full,
+            buffer_ty: FileBufferType::Line,
         }
     }
 
@@ -82,7 +82,7 @@ impl FILE {
         }
     }
 
-    fn wcapacity(&self) -> usize {
+    fn capacity(&self) -> usize {
         self.buffer_size() - self.buffer_len
     }
 
@@ -94,12 +94,22 @@ impl FILE {
         .add(self.buffer_len)
     }
 
-    unsafe fn write_directly(&mut self, buf: &[u8]) -> core2::io::Result<usize> {
+    unsafe fn write_directly(&mut self, buf: &[u8]) -> Result<usize> {
         let len = write(self.fd, buf.as_ptr() as _, buf.len());
         if len >= 0 {
             Ok(len as usize)
         } else {
             Err(match_errno_io(errno).into())
+        }
+    }
+
+    unsafe fn write_buffered(&mut self, buf: &[u8]) -> Result<usize> {
+        if buf.len() > self.buffer_size() {
+            self.write_directly(buf)
+        } else {
+            copy_nonoverlapping(buf.as_ptr(), self.buffer_ptr() as *mut u8, buf.len());
+            self.buffer_len += buf.len();
+            Ok(buf.len())
         }
     }
 }
@@ -120,21 +130,30 @@ const fn match_errno_io(err: errno_t) -> ErrorKind {
 
 impl Write for FILE {
     fn write(&mut self, buf: &[u8]) -> Result<usize> {
-        let cap = self.wcapacity();
+        let cap = self.capacity();
         if buf.len() > cap {
             self.flush()?;
         }
         unsafe {
             match self.buffer_ty {
                 FileBufferType::None => self.write_directly(buf),
-                FileBufferType::Line | FileBufferType::Full => {
-                    if buf.len() > self.buffer_size() {
-                        self.write_directly(buf)
-                    } else {
-                        copy_nonoverlapping(buf.as_ptr(), self.buffer_ptr() as *mut u8, buf.len());
-                        self.buffer_len += buf.len();
-                        Ok(buf.len())
+                FileBufferType::Full => self.write_buffered(buf),
+                FileBufferType::Line => {
+                    let mut len = 0;
+                    let mut buf = buf;
+                    loop {
+                        let index = memchr(buf.as_ptr() as _, b'\n' as _, buf.len());
+                        if index.is_null() {
+                            len += self.write_buffered(buf)?;
+                            break;
+                        } else {
+                            let index = index.offset_from(buf.as_ptr() as _) as usize;
+                            len += self.write_buffered(buf.get_unchecked(..=index))?;
+                            self.flush()?;
+                            buf = buf.get_unchecked((index + 1)..);
+                        }
                     }
+                    Ok(len)
                 }
             }
         }
@@ -166,14 +185,54 @@ impl core2::io::Read for FILE {
 
 impl core2::io::BufRead for FILE {
     fn fill_buf(&mut self) -> Result<&[u8]> {
-        todo!()
+        unsafe {
+            self.flush()?;
+            let ptr = self.buffer_ptr();
+            let buf = from_raw_parts_mut(ptr as _, self.capacity());
+            self.read(buf)?;
+            Ok(buf)
+        }
     }
 
     fn consume(&mut self, amt: usize) {
-        todo!()
+        unsafe {
+            let ptr = self.buffer_ptr();
+            copy(ptr.add(amt), ptr, self.buffer_size() - amt);
+        }
     }
 }
 
+fn read_until<R: BufRead + ?Sized>(r: &mut R, delim: u8, buf: &mut impl Write) -> Result<usize> {
+    let mut read = 0;
+    loop {
+        let (done, used) = {
+            let available = match r.fill_buf() {
+                Ok(n) => n,
+                Err(ref e) if e.kind() == ErrorKind::Interrupted => continue,
+                Err(e) => return Err(e),
+            };
+            match unsafe {
+                memchr(available.as_ptr() as _, delim as _, available.len())
+                    .as_ref()
+                    .map(|p| (p as *const i8 as *const u8).offset_from(available.as_ptr()) as usize)
+            } {
+                Some(i) => {
+                    buf.write(&available[..i])?;
+                    (true, i)
+                }
+                None => {
+                    buf.write(available)?;
+                    (false, available.len())
+                }
+            }
+        };
+        r.consume(used);
+        read += used;
+        if done || used == 0 {
+            return Ok(read);
+        }
+    }
+}
 #[derive(Debug)]
 struct StrBuffer {
     data: *mut char_t,
@@ -272,13 +331,21 @@ pub unsafe extern "C" fn putchar(c: int_t) -> int_t {
     fputc(c, &mut __stdout)
 }
 
-unsafe fn fgets_impl(s: *mut char_t, f: &mut FILE) -> Result<()> {
-    todo!()
+unsafe fn fgets_impl(s: *mut char_t, f: &mut FILE, len: Option<size_t>) -> Result<()> {
+    let mut buf = match len {
+        Some(len) => StrBuffer::from_ptr_len(s, len),
+        None => StrBuffer::from_ptr(s),
+    };
+    read_until(f, b'\n', &mut buf)?;
+    Ok(())
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn gets(s: *mut char_t) -> *mut char_t {
-    todo!()
+    match fgets_impl(s, &mut __stdin, None) {
+        Ok(_) => s,
+        Err(_) => null_mut(),
+    }
 }
 
 pub mod printf;

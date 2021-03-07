@@ -22,6 +22,8 @@ int fputs(const char*, FILE*);
 int fputc(int, FILE*);
 #define putc(c, f) (fputc((c), (f)))
 
+char* gets(char*);
+
 int printf(const char* fmt, ...);
 int fprintf(FILE*, const char* fmt, ...);
 int sprintf(char*, const char* fmt, ...);
