@@ -1,13 +1,12 @@
 //! Process lifetime management
 
+use crate::libc::stdio::*;
 use crate::posix::signal::{raise, SIGABRT};
 use crate::syscalls::*;
 use crate::types::int_t;
+use core2::io::Write;
 
-static mut ATEXIT_FNS: [Option<extern "C" fn()>; 32] = [
-    None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
-    None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
-];
+static mut ATEXIT_FNS: [Option<unsafe extern "C" fn()>; 32] = [None; 32];
 
 /// Terminates the process normally, performing the regular cleanup.
 /// All C streams are closed, and all files created with tmpfile are removed.
@@ -19,6 +18,9 @@ pub unsafe extern "C" fn exit(x: int_t) -> ! {
             func();
         }
     }
+    __stdin.flush().unwrap();
+    __stdout.flush().unwrap();
+    __stderr.flush().unwrap();
     _exit(x);
 }
 
@@ -44,7 +46,7 @@ pub unsafe extern "C" fn abort() -> ! {
 
 #[no_mangle]
 /// Note: this doesn't check for a null argument, sparing a branch.
-pub unsafe extern "C" fn atexit(func: Option<extern "C" fn()>) -> int_t {
+pub unsafe extern "C" fn atexit(func: Option<unsafe extern "C" fn()>) -> int_t {
     for i in &mut ATEXIT_FNS {
         if i.is_none() {
             *i = func;

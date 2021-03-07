@@ -1,5 +1,6 @@
 use crate::types::int_t;
 
+pub const EINTR: int_t = 4;
 pub const ENOMEM: int_t = 12; /* Cannot allocate memory */
 pub const EACCES: int_t = 13; /* Permission denied */
 pub const EEXIST: int_t = 17; /* File exists */

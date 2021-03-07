@@ -13,7 +13,7 @@ use crate::libc::stdio::*;
 use crate::posix::stdlib::abort;
 use core::alloc::Layout;
 use core::panic::PanicInfo;
-use core::{self, fmt::Write};
+use core2::io::Write;
 
 #[lang = "eh_personality"]
 unsafe extern "C" fn rust_eh_personality() {
@@ -24,7 +24,7 @@ unsafe extern "C" fn rust_eh_personality() {
 unsafe extern "C" fn rust_begin_panic(info: &PanicInfo) -> ! {
     if let Some(msg) = info.message() {
         __stderr.write_fmt(*msg).unwrap_or_default();
-        __stderr.write_char('\n').unwrap_or_default();
+        write!(&mut __stderr, "\n").unwrap_or_default();
     }
     abort()
 }

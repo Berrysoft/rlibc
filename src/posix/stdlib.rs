@@ -6,7 +6,7 @@ use crate::posix::fcntl::open;
 pub use crate::posix::pm::{_Exit, _exit, abort, atexit, exit};
 use crate::rust::alloc::ALLOCATOR;
 use crate::rust::rand::{os_rand, Rand};
-use crate::types::{char_t, int_t, size_t, ulong_t, void_t};
+use crate::types::{char_t, int_t, size_t, void_t};
 use alloc::alloc::{GlobalAlloc, Layout};
 use alloc::borrow::ToOwned;
 use alloc::collections::BTreeMap;
