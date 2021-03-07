@@ -15,14 +15,24 @@ extern FILE __stderr;
 #define stderr (&__stderr)
 
 // TODO: f*
-// TODO: buf
 
 int puts(const char*);
-int fputs(const char*, FILE*);
+int fputs(const char* restrict, FILE* restrict);
 int fputc(int, FILE*);
 #define putc(c, f) (fputc((c), (f)))
+int putchar(int);
 
 char* gets(char*);
+char* fgets(char* restrict, int, FILE* restrict);
+int fgetc(FILE*);
+#define getc(f) (fgetc(f))
+int getchar(void);
+
+int fileno(FILE*);
+void setbuf(FILE* restrict stream, char* restrict buffer);
+int setvbuf(FILE* restrict stream, char* restrict buffer, int mode, size_t size);
+
+int fflush(FILE*);
 
 int printf(const char* fmt, ...);
 int fprintf(FILE*, const char* fmt, ...);

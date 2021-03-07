@@ -241,6 +241,10 @@ void test_input()
     char name[256];
     gets(name);
     printf("Hello, %s!\n", name);
+    fflush(stdin);
+    fputs("Press any key to continue...", stdout);
+    fflush(stdout);
+    getchar();
 }
 
 void test_all()

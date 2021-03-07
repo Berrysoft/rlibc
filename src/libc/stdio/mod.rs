@@ -1,9 +1,11 @@
-use crate::consts::errno::{EINTR, EISDIR};
+use crate::consts::errno::{EINTR, EINVAL, EISDIR};
 use crate::libc::errno::errno;
 use crate::libc::string::{memchr, strlen};
 use crate::posix::unistd::{read, rmdir, unlink, write};
 use crate::syscalls::sys_rename;
 use crate::types::*;
+use alloc::vec;
+use alloc::vec::Vec;
 use core::intrinsics::{copy, copy_nonoverlapping};
 use core::ptr::null_mut;
 use core::slice::{from_raw_parts, from_raw_parts_mut};
@@ -54,6 +56,7 @@ enum FileBufferType {
 #[derive(Debug)]
 enum FileBuffer {
     Internal([char_t; BUFSIZ]),
+    Extended(Vec<char_t>),
     External(StrBuffer),
 }
 
@@ -62,6 +65,7 @@ pub struct FILE {
     fd: int_t,
     buffer: FileBuffer,
     buffer_len: usize,
+    buffer_rlen: usize,
     buffer_ty: FileBufferType,
 }
 
@@ -71,6 +75,7 @@ impl FILE {
             fd,
             buffer: FileBuffer::Internal([0; BUFSIZ]),
             buffer_len: 0,
+            buffer_rlen: 0,
             buffer_ty: FileBufferType::Line,
         }
     }
@@ -78,6 +83,7 @@ impl FILE {
     fn buffer_size(&self) -> usize {
         match &self.buffer {
             FileBuffer::Internal(_) => BUFSIZ,
+            FileBuffer::Extended(buf) => buf.len(),
             FileBuffer::External(buf) => buf.len.unwrap_or(BUFSIZ),
         }
     }
@@ -89,6 +95,7 @@ impl FILE {
     unsafe fn buffer_ptr(&mut self) -> *mut char_t {
         match &mut self.buffer {
             FileBuffer::Internal(buf) => buf.as_mut_ptr(),
+            FileBuffer::Extended(buf) => buf.as_mut_ptr(),
             FileBuffer::External(buf) => buf.data,
         }
         .add(self.buffer_len)
@@ -109,7 +116,17 @@ impl FILE {
         } else {
             copy_nonoverlapping(buf.as_ptr(), self.buffer_ptr() as *mut u8, buf.len());
             self.buffer_len += buf.len();
+            self.buffer_rlen -= self.buffer_rlen.min(buf.len());
             Ok(buf.len())
+        }
+    }
+
+    unsafe fn read_directly(&mut self, buf: &mut [u8]) -> Result<usize> {
+        let len = read(self.fd, buf.as_mut_ptr() as _, buf.len());
+        if len >= 0 {
+            Ok(len as usize)
+        } else {
+            Err(match_errno_io(errno).into())
         }
     }
 }
@@ -162,6 +179,7 @@ impl Write for FILE {
     fn flush(&mut self) -> Result<()> {
         let len = self.buffer_len;
         self.buffer_len = 0;
+        self.buffer_rlen = 0;
         unsafe {
             let ptr = self.buffer_ptr() as _;
             self.write_directly(from_raw_parts(ptr, len))?;
@@ -173,11 +191,12 @@ impl Write for FILE {
 impl core2::io::Read for FILE {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
         unsafe {
-            let len = read(self.fd, buf.as_mut_ptr() as _, buf.len());
-            if len >= 0 {
-                Ok(len as usize)
+            if self.buffer_rlen > 0 {
+                let len = self.buffer_rlen.min(buf.len());
+                copy_nonoverlapping(self.buffer_ptr(), buf.as_mut_ptr() as _, len);
+                Ok(len)
             } else {
-                Err(match_errno_io(errno).into())
+                self.read_directly(buf)
             }
         }
     }
@@ -186,11 +205,16 @@ impl core2::io::Read for FILE {
 impl core2::io::BufRead for FILE {
     fn fill_buf(&mut self) -> Result<&[u8]> {
         unsafe {
-            self.flush()?;
+            if self.capacity() - self.buffer_rlen == 0 {
+                self.flush()?;
+            }
             let ptr = self.buffer_ptr();
-            let buf = from_raw_parts_mut(ptr as _, self.capacity());
-            self.read(buf)?;
-            Ok(buf)
+            let buf = from_raw_parts_mut(
+                ptr.add(self.buffer_rlen) as _,
+                self.capacity() - self.buffer_rlen,
+            );
+            self.buffer_rlen += self.read_directly(buf)?;
+            Ok(from_raw_parts(ptr as _, self.buffer_rlen))
         }
     }
 
@@ -199,6 +223,46 @@ impl core2::io::BufRead for FILE {
             let ptr = self.buffer_ptr();
             copy(ptr.add(amt), ptr, self.buffer_size() - amt);
         }
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn fileno(f: *mut FILE) -> int_t {
+    f.as_ref().unwrap_unchecked().fd
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn setvbuf(f: *mut FILE, buf: *mut char_t, mode: int_t, n: size_t) -> int_t {
+    let f = f.as_mut().unwrap_unchecked();
+    f.buffer_ty = match mode {
+        _IOFBF => FileBufferType::Full,
+        _IOLBF => FileBufferType::Line,
+        _IONBF => FileBufferType::None,
+        _ => {
+            errno = EINVAL;
+            return -1;
+        }
+    };
+    if buf.is_null() {
+        if n == BUFSIZ {
+            f.buffer = FileBuffer::Internal([0; BUFSIZ]);
+        } else {
+            f.buffer = FileBuffer::Extended(vec![0; n]);
+        }
+    } else {
+        f.buffer = FileBuffer::External(StrBuffer::from_ptr_len(buf, n));
+    }
+    f.buffer_len = 0;
+    f.buffer_rlen = 0;
+    0
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn setbuf(f: *mut FILE, buf: *mut char_t) -> int_t {
+    if buf.is_null() {
+        setvbuf(f, buf, _IOFBF, BUFSIZ)
+    } else {
+        setvbuf(f, null_mut(), _IONBF, 0)
     }
 }
 
@@ -331,7 +395,7 @@ pub unsafe extern "C" fn putchar(c: int_t) -> int_t {
     fputc(c, &mut __stdout)
 }
 
-unsafe fn fgets_impl(s: *mut char_t, f: &mut FILE, len: Option<size_t>) -> Result<()> {
+unsafe fn fgets_impl(s: *mut char_t, len: Option<size_t>, f: &mut FILE) -> Result<()> {
     let mut buf = match len {
         Some(len) => StrBuffer::from_ptr_len(s, len),
         None => StrBuffer::from_ptr(s),
@@ -342,10 +406,44 @@ unsafe fn fgets_impl(s: *mut char_t, f: &mut FILE, len: Option<size_t>) -> Resul
 
 #[no_mangle]
 pub unsafe extern "C" fn gets(s: *mut char_t) -> *mut char_t {
-    match fgets_impl(s, &mut __stdin, None) {
+    match fgets_impl(s, None, &mut __stdin) {
         Ok(_) => s,
         Err(_) => null_mut(),
     }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn fgets(s: *mut char_t, n: int_t, f: *mut FILE) -> *mut char_t {
+    match fgets_impl(s, Some(n as size_t), f.as_mut().unwrap_unchecked()) {
+        Ok(_) => s,
+        Err(_) => null_mut(),
+    }
+}
+
+unsafe fn fgetc_impl(f: &mut FILE) -> Result<int_t> {
+    let mut buf = [0];
+    f.read(&mut buf)?;
+    Ok(buf[0] as _)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn fgetc(f: *mut FILE) -> int_t {
+    unwrap_result(fgetc_impl(f.as_mut().unwrap_unchecked()))
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn getchar() -> int_t {
+    fgetc(&mut __stdin)
+}
+
+unsafe fn fflush_impl(f: &mut FILE) -> Result<int_t> {
+    f.flush()?;
+    Ok(0)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn fflush(f: *mut FILE) -> int_t {
+    unwrap_result(fflush_impl(f.as_mut().unwrap_unchecked()))
 }
 
 pub mod printf;
